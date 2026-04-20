@@ -31,6 +31,8 @@ env:
   RUST_VERSION: "1.75"
   FLUTTER_VERSION: "3.24.5"
   LLVM_VERSION: "15.0.6"
+  CARGO_EXPAND_VERSION: "1.0.95"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   VCPKG_TRIPLET: "x64-windows-static"
@@ -121,6 +123,25 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           targets: x86_64-pc-windows-msvc
           components: rustfmt
+
+      - name: Install Flutter Rust Bridge codegen
+        shell: pwsh
+        run: |
+          cargo install cargo-expand --version "${{ env.CARGO_EXPAND_VERSION }}" --locked
+          cargo install flutter_rust_bridge_codegen --version "${{ env.FLUTTER_RUST_BRIDGE_VERSION }}" --features "uuid" --locked
+          Push-Location .\flutter
+          flutter pub get
+          Pop-Location
+
+      - name: Generate Flutter Rust Bridge bindings
+        shell: pwsh
+        run: |
+          $codegen = Join-Path $env:USERPROFILE ".cargo\bin\flutter_rust_bridge_codegen.exe"
+          & $codegen `
+            --rust-input .\src\flutter_ffi.rs `
+            --dart-output .\flutter\lib\generated_bridge.dart `
+            --c-output .\flutter\macos\Runner\bridge_generated.h
+          Copy-Item -LiteralPath .\flutter\macos\Runner\bridge_generated.h -Destination .\flutter\ios\Runner\bridge_generated.h -Force
 
       - name: Cache Rust builds
         uses: Swatinem/rust-cache@v2

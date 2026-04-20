@@ -182,6 +182,29 @@ jobs:
           flutter pub get
           popd
 
+      - name: Patch uni_links Android compileSdk in CI
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          patched = []
+          for path in Path.home().glob(".pub-cache/hosted/pub.dev/uni_links-*/android/build.gradle"):
+              text = path.read_text(encoding="utf-8")
+              updated = text.replace("compileSdkVersion 28", "compileSdkVersion 34")
+              updated = updated.replace("targetSdkVersion 28", "targetSdkVersion 34")
+              if updated != text:
+                  path.write_text(updated, encoding="utf-8", newline="\n")
+                  patched.append(str(path))
+
+          if not patched:
+              raise SystemExit("uni_links Android build.gradle not found in pub cache")
+
+          print("Patched:")
+          for item in patched:
+              print(item)
+          PY
+
       - name: Generate Flutter Rust Bridge bindings
         shell: bash
         run: |
