@@ -7,12 +7,12 @@ class WindowCaptionButtonIcon extends StatelessWidget {
     Key? key,
     required this.name,
     this.color,
-    this.package = 'window_manager',
+    this.package,
   }) : super(key: key);
 
   final String name;
   final Color? color;
-  final String package;
+  final String? package;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class WindowCaptionButton extends StatefulWidget {
     this.brightness,
     this.icon,
     this.onPressed,
-  })  : iconName = 'images/ic_chrome_close.png',
+  })  : iconName = 'assets/ic_chrome_close.png',
         _lightButtonBgColorScheme = _ButtonBgColorScheme(
           normal: Colors.transparent,
           hovered: const Color(0xffC42B1C),
@@ -70,7 +70,7 @@ class WindowCaptionButton extends StatefulWidget {
     this.brightness,
     this.icon,
     this.onPressed,
-  })  : iconName = 'images/ic_chrome_unmaximize.png',
+  })  : iconName = 'assets/ic_chrome_unmaximize.png',
         super(key: key);
 
   WindowCaptionButton.maximize({
@@ -78,7 +78,7 @@ class WindowCaptionButton extends StatefulWidget {
     this.brightness,
     this.icon,
     this.onPressed,
-  })  : iconName = 'images/ic_chrome_maximize.png',
+  })  : iconName = 'assets/ic_chrome_maximize.png',
         super(key: key);
 
   WindowCaptionButton.minimize({
@@ -86,7 +86,7 @@ class WindowCaptionButton extends StatefulWidget {
     this.brightness,
     this.icon,
     this.onPressed,
-  })  : iconName = 'images/ic_chrome_minimize.png',
+  })  : iconName = 'assets/ic_chrome_minimize.png',
         super(key: key);
 
   final Brightness? brightness;
