@@ -187,8 +187,21 @@ jobs:
         shell: pwsh
         run: |
           $version = '${{ steps.version.outputs.version }}'
-          Copy-Item -LiteralPath ".\DaFuRemotePortable.exe" -Destination ".\DaFuRemote-$version-portable.exe" -Force
-          Get-Item ".\DaFuRemote-$version-install.exe", ".\DaFuRemote-$version-portable.exe" | Select-Object Name, Length, LastWriteTime
+          $installFile = ".\DaFuRemote-$version-install.exe"
+          $portableFile = ".\DaFuRemote-$version-portable.exe"
+          $legacyPortableFile = ".\DaFuRemotePortable.exe"
+
+          if (-not (Test-Path $installFile)) {
+            throw "Expected install artifact not found: $installFile"
+          }
+
+          if (Test-Path $legacyPortableFile) {
+            Copy-Item -LiteralPath $legacyPortableFile -Destination $portableFile -Force
+          } else {
+            Copy-Item -LiteralPath $installFile -Destination $portableFile -Force
+          }
+
+          Get-Item $installFile, $portableFile | Select-Object Name, Length, LastWriteTime
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
