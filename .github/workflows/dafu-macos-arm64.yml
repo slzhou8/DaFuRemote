@@ -30,6 +30,8 @@ on:
 env:
   MAC_RUST_VERSION: "1.81"
   FLUTTER_VERSION: "3.24.5"
+  CARGO_EXPAND_VERSION: "1.0.95"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -107,6 +109,24 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           prefix-key: macos-arm64
+
+      - name: Install Flutter Rust Bridge codegen
+        shell: bash
+        run: |
+          cargo install cargo-expand --version "${{ env.CARGO_EXPAND_VERSION }}" --locked
+          cargo install flutter_rust_bridge_codegen --version "${{ env.FLUTTER_RUST_BRIDGE_VERSION }}" --features "uuid" --locked
+          pushd flutter
+          flutter pub get
+          popd
+
+      - name: Generate Flutter Rust Bridge bindings
+        shell: bash
+        run: |
+          ~/.cargo/bin/flutter_rust_bridge_codegen \
+            --rust-input ./src/flutter_ffi.rs \
+            --dart-output ./flutter/lib/generated_bridge.dart \
+            --c-output ./flutter/macos/Runner/bridge_generated.h
+          cp ./flutter/macos/Runner/bridge_generated.h ./flutter/ios/Runner/bridge_generated.h
 
       - name: Setup vcpkg with GitHub Actions cache
         uses: lukka/run-vcpkg@v11
