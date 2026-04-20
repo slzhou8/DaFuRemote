@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RustDesk UI 设计方案预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+        
+        .theme-selector {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .theme-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 180px;
+        }
+        
+        .theme-btn.modern {
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            color: white;
+        }
+        
+        .theme-btn.tech {
+            background: linear-gradient(135deg, #0A0A0F, #16161F);
+            color: #00F0FF;
+            border: 1px solid #00F0FF;
+        }
+        
+        .theme-btn.business {
+            background: linear-gradient(135deg, #1E40AF, #3B82F6);
+            color: white;
+        }
+        
+        .theme-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .theme-btn.active {
+            box-shadow: 0 0 0 3px #fff, 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .preview-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .preview-window {
+            background: #F8FAFC;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            min-height: 700px;
+        }
+        
+        /* 现代简约风格 */
+        .modern-theme .title-bar {
+            background: #fff;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        
+        .modern-theme .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .modern-theme .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .modern-theme .logo-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        
+        .modern-theme .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .modern-theme .control-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .modern-theme .control-btn.close { background: #EF4444; }
+        .modern-theme .control-btn.minimize { background: #F59E0B; }
+        .modern-theme .control-btn.maximize { background: #10B981; }
+        
+        .modern-theme .main-content {
+            display: flex;
+            min-height: 640px;
+        }
+        
+        .modern-theme .sidebar {
+            width: 240px;
+            background: #fff;
+            border-right: 1px solid #E2E8F0;
+            padding: 20px 0;
+        }
+        
+        .modern-theme .nav-item {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .modern-theme .nav-item:hover,
+        .modern-theme .nav-item.active {
+            background: #F1F5F9;
+            color: #6366F1;
+        }
+        
+        .modern-theme .nav-item.active {
+            border-right: 3px solid #6366F1;
+        }
+        
+        .modern-theme .content-area {
+            flex: 1;
+            padding: 24px;
+            background: #F8FAFC;
+        }
+        
+        .modern-theme .search-bar {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .modern-theme .search-bar input {
+            border: none;
+            outline: none;
+            flex: 1;
+            font-size: 1rem;
+            color: #0F172A;
+        }
+        
+        .modern-theme .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .modern-theme .device-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            border: 1px solid #E2E8F0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .modern-theme .device-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        
+        .modern-theme .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .modern-theme .status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modern-theme .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .modern-theme .status-dot.online { background: #10B981; }
+        .modern-theme .status-dot.offline { background: #94A3B8; }
+        .modern-theme .status-dot.busy { background: #F59E0B; }
+        
+        .modern-theme .platform-icon {
+            width: 24px;
+            height: 24px;
+            background: #E2E8F0;
+            border-radius: 6px;
+        }
+        
+        .modern-theme .device-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0F172A;
+            margin-bottom: 6px;
+        }
+        
+        .modern-theme .device-id {
+            font-size: 0.85rem;
+            color: #94A3B8;
+            font-family: monospace;
+        }
+        
+        .modern-theme .connect-btn {
+            margin-top: 16px;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modern-theme .connect-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+        
+        /* 科技暗黑风格 */
+        .tech-theme .title-bar {
+            background: #0A0A0F;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        
+        .tech-theme .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .tech-theme .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid #00F0FF;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00F0FF;
+            font-size: 20px;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+        
+        .tech-theme .logo-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #EAEAEA;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+        
+        .tech-theme .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .tech-theme .control-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        
+        .tech-theme .control-btn.close { background: #FF006E; }
+        .tech-theme .control-btn.minimize { background: #FBBF24; }
+        .tech-theme .control-btn.maximize { background: #39FF14; }
+        
+        .tech-theme .main-content {
+            display: flex;
+            min-height: 640px;
+            background: #0A0A0F;
+        }
+        
+        .tech-theme .sidebar {
+            width: 240px;
+            background: #12121A;
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+            padding: 20px 0;
+        }
+        
+        .tech-theme .nav-item {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #A0A0B0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tech-theme .nav-item:hover,
+        .tech-theme .nav-item.active {
+            background: rgba(0, 240, 255, 0.1);
+            color: #00F0FF;
+        }
+        
+        .tech-theme .nav-item.active {
+            border-left: 3px solid #00F0FF;
+        }
+        
+        .tech-theme .content-area {
+            flex: 1;
+            padding: 24px;
+            background: #0A0A0F;
+        }
+        
+        .tech-theme .search-bar {
+            background: #16161F;
+            border-radius: 8px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        
+        .tech-theme .search-bar input {
+            border: none;
+            outline: none;
+            flex: 1;
+            font-size: 1rem;
+            color: #EAEAEA;
+            background: transparent;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tech-theme .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .tech-theme .device-card {
+            background: #16161F;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tech-theme .device-card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #00F0FF, #B026FF);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tech-theme .device-card:hover::before {
+            opacity: 0.5;
+        }
+        
+        .tech-theme .device-card:hover {
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+        }
+        
+        .tech-theme .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .tech-theme .status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tech-theme .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        .tech-theme .status-dot.online { background: #39FF14; color: #39FF14; }
+        .tech-theme .status-dot.offline { background: #606070; color: #606070; }
+        .tech-theme .status-dot.busy { background: #FBBF24; color: #FBBF24; }
+        
+        .tech-theme .platform-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 240, 255, 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+        
+        .tech-theme .device-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #EAEAEA;
+            margin-bottom: 6px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tech-theme .device-id {
+            font-size: 0.85rem;
+            color: #606070;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .tech-theme .connect-btn {
+            margin-top: 16px;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #00F0FF;
+            border-radius: 8px;
+            background: transparent;
+            color: #00F0FF;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .tech-theme .connect-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+        }
+        
+        /* 商务专业风格 */
+        .business-theme .title-bar {
+            background: #fff;
+            padding: 15px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #E5E7EB;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+        
+        .business-theme .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .business-theme .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #1E40AF, #3B82F6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .business-theme .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .business-theme .nav-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .business-theme .nav-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #4B5563;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .business-theme .nav-tab.active {
+            background: rgba(30, 64, 175, 0.08);
+            color: #1E40AF;
+        }
+        
+        .business-theme .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .business-theme .control-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .business-theme .control-btn.close { background: #EF4444; }
+        .business-theme .control-btn.minimize { background: #F59E0B; }
+        .business-theme .control-btn.maximize { background: #10B981; }
+        
+        .business-theme .main-content {
+            display: flex;
+            min-height: 640px;
+        }
+        
+        .business-theme .sidebar {
+            width: 280px;
+            background: #F9FAFB;
+            border-right: 1px solid #E5E7EB;
+            padding: 24px;
+        }
+        
+        .business-theme .quick-connect {
+            background: linear-gradient(135deg, #1E40AF, #1E3A8A);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+        }
+        
+        .business-theme .quick-connect h3 {
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+        
+        .business-theme .quick-connect p {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 20px;
+        }
+        
+        .business-theme .quick-connect input {
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+        }
+        
+        .business-theme .quick-connect button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: white;
+            color: #1E40AF;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .business-theme .content-area {
+            flex: 1;
+            padding: 24px;
+            background: #F9FAFB;
+        }
+        
+        .business-theme .device-table {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            overflow: hidden;
+        }
+        
+        .business-theme .table-header {
+            display: grid;
+            grid-template-columns: 40px 2fr 1fr 1fr 2fr 1fr 80px;
+            padding: 14px 20px;
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .business-theme .table-row {
+            display: grid;
+            grid-template-columns: 40px 2fr 1fr 1fr 2fr 1fr 80px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #F3F4F6;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .business-theme .table-row:hover {
+            background: #F9FAFB;
+        }
+        
+        .business-theme .row-device {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .business-theme .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .business-theme .status-badge.online {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .business-theme .status-badge.offline {
+            background: #F3F4F6;
+            color: #6B7280;
+        }
+        
+        .business-theme .status-badge.busy {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+        
+        .business-theme .device-name {
+            font-weight: 500;
+            color: #111827;
+        }
+        
+        .business-theme .device-id {
+            font-family: monospace;
+            color: #6B7280;
+            font-size: 0.85rem;
+        }
+        
+        .business-theme .action-btn {
+            padding: 6px 12px;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            background: white;
+            color: #4B5563;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .business-theme .action-btn:hover {
+            background: #F9FAFB;
+        }
+        
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00F0FF, transparent);
+            animation: scan 3s linear infinite;
+            opacity: 0.5;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .label {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+            color: #94A3B8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 RustDesk UI 设计方案预览</h1>
+        <p>点击下方按钮切换不同设计方案</p>
+    </div>
+    
+    <div class="theme-selector">
+        <button class="theme-btn modern active" onclick="showTheme('modern')">方案一：现代简约</button>
+        <button class="theme-btn tech" onclick="showTheme('tech')">方案二：科技暗黑</button>
+        <button class="theme-btn business" onclick="showTheme('business')">方案三：商务专业</button>
+    </div>
+    
+    <div class="preview-container">
+        <div class="label">📱 界面预览（1200 x 700）</div>
+        
+        <!-- 现代简约风格 -->
+        <div id="modern" class="preview-window modern-theme">
+            <div class="title-bar">
+                <div class="logo">
+                    <div class="logo-icon">🖥</div>
+                    <span class="logo-text">RustDesk</span>
+                </div>
+                <div class="window-controls">
+                    <div class="control-btn minimize"></div>
+                    <div class="control-btn maximize"></div>
+                    <div class="control-btn close"></div>
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="sidebar">
+                    <div class="nav-item active">📱 我的设备</div>
+                    <div class="nav-item">📇 地址簿</div>
+                    <div class="nav-item">📜 会话记录</div>
+                    <div class="nav-item">📁 文件传输</div>
+                    <div class="nav-item">⚙️ 设置</div>
+                </div>
+                <div class="content-area">
+                    <div class="search-bar">
+                        🔍 <input type="text" placeholder="搜索设备名称或 ID...">
+                    </div>
+                    <div class="device-grid">
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot online"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span>⋯</span>
+                            </div>
+                            <div class="device-name">办公电脑</div>
+                            <div class="device-id">123 456 789</div>
+                            <button class="connect-btn">连接</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot online"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span>⋯</span>
+                            </div>
+                            <div class="device-name">家庭笔记本</div>
+                            <div class="device-id">987 654 321</div>
+                            <button class="connect-btn">连接</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot offline"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span>⋯</span>
+                            </div>
+                            <div class="device-name">服务器</div>
+                            <div class="device-id">456 789 123</div>
+                            <button class="connect-btn">连接</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot busy"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span>⋯</span>
+                            </div>
+                            <div class="device-name">测试设备</div>
+                            <div class="device-id">789 123 456</div>
+                            <button class="connect-btn">连接</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 科技暗黑风格 -->
+        <div id="tech" class="preview-window tech-theme" style="display: none;">
+            <div class="title-bar">
+                <div class="logo">
+                    <div class="logo-icon">⚡</div>
+                    <span class="logo-text">RUSTDESK</span>
+                </div>
+                <div class="window-controls">
+                    <div class="control-btn minimize"></div>
+                    <div class="control-btn maximize"></div>
+                    <div class="control-btn close"></div>
+                </div>
+            </div>
+            <div class="main-content" style="position: relative;">
+                <div class="scanline"></div>
+                <div class="sidebar">
+                    <div class="nav-item active">[1] 设备列表</div>
+                    <div class="nav-item">[2] 地址簿</div>
+                    <div class="nav-item">[3] 会话日志</div>
+                    <div class="nav-item">[4] 文件管理</div>
+                    <div class="nav-item">[5] 系统设置</div>
+                </div>
+                <div class="content-area">
+                    <div class="search-bar">
+                        ⌕ <input type="text" placeholder="ENTER TARGET ID...">
+                    </div>
+                    <div class="device-grid">
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot online"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span style="color: #00F0FF;">⋯</span>
+                            </div>
+                            <div class="device-name">WORKSTATION_01</div>
+                            <div class="device-id">123 456 789</div>
+                            <button class="connect-btn">INITIATE</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot online"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span style="color: #00F0FF;">⋯</span>
+                            </div>
+                            <div class="device-name">HOME_LAPTOP</div>
+                            <div class="device-id">987 654 321</div>
+                            <button class="connect-btn">INITIATE</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot offline"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span style="color: #00F0FF;">⋯</span>
+                            </div>
+                            <div class="device-name">SERVER_MAIN</div>
+                            <div class="device-id">456 789 123</div>
+                            <button class="connect-btn">INITIATE</button>
+                        </div>
+                        <div class="device-card">
+                            <div class="card-header">
+                                <div class="status-row">
+                                    <div class="status-dot busy"></div>
+                                    <div class="platform-icon"></div>
+                                </div>
+                                <span style="color: #00F0FF;">⋯</span>
+                            </div>
+                            <div class="device-name">TEST_NODE</div>
+                            <div class="device-id">789 123 456</div>
+                            <button class="connect-btn">INITIATE</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 商务专业风格 -->
+        <div id="business" class="preview-window business-theme" style="display: none;">
+            <div class="title-bar">
+                <div class="logo">
+                    <div class="logo-icon">🖥</div>
+                    <span class="logo-text">RustDesk</span>
+                </div>
+                <div class="nav-tabs">
+                    <div class="nav-tab active">📱 设备</div>
+                    <div class="nav-tab">📜 会话</div>
+                    <div class="nav-tab">📁 文件</div>
+                    <div class="nav-tab">⚙️ 设置</div>
+                </div>
+                <div class="window-controls">
+                    <div class="control-btn minimize"></div>
+                    <div class="control-btn maximize"></div>
+                    <div class="control-btn close"></div>
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="sidebar">
+                    <div class="quick-connect">
+                        <h3>快速连接</h3>
+                        <p>输入远程设备 ID 即可建立连接</p>
+                        <input type="text" placeholder="输入设备 ID...">
+                        <button>🔗 立即连接</button>
+                    </div>
+                </div>
+                <div class="content-area">
+                    <div class="device-table">
+                        <div class="table-header">
+                            <div></div>
+                            <div>设备名称</div>
+                            <div>状态</div>
+                            <div>平台</div>
+                            <div>ID</div>
+                            <div>最后在线</div>
+                            <div>操作</div>
+                        </div>
+                        <div class="table-row">
+                            <div><input type="checkbox"></div>
+                            <div class="row-device">
+                                <div class="status-dot online"></div>
+                                <span class="device-name">办公电脑</span>
+                            </div>
+                            <div><span class="status-badge online">在线</span></div>
+                            <div>Windows</div>
+                            <div class="device-id">123 456 789</div>
+                            <div>现在</div>
+                            <div><button class="action-btn">连接</button></div>
+                        </div>
+                        <div class="table-row">
+                            <div><input type="checkbox"></div>
+                            <div class="row-device">
+                                <div class="status-dot online"></div>
+                                <span class="device-name">家庭笔记本</span>
+                            </div>
+                            <div><span class="status-badge online">在线</span></div>
+                            <div>macOS</div>
+                            <div class="device-id">987 654 321</div>
+                            <div>5分钟前</div>
+                            <div><button class="action-btn">连接</button></div>
+                        </div>
+                        <div class="table-row">
+                            <div><input type="checkbox"></div>
+                            <div class="row-device">
+                                <div class="status-dot offline"></div>
+                                <span class="device-name">服务器</span>
+                            </div>
+                            <div><span class="status-badge offline">离线</span></div>
+                            <div>Linux</div>
+                            <div class="device-id">456 789 123</div>
+                            <div>2小时前</div>
+                            <div><button class="action-btn">连接</button></div>
+                        </div>
+                        <div class="table-row">
+                            <div><input type="checkbox"></div>
+                            <div class="row-device">
+                                <div class="status-dot busy"></div>
+                                <span class="device-name">测试设备</span>
+                            </div>
+                            <div><span class="status-badge busy">忙碌</span></div>
+                            <div>Windows</div>
+                            <div class="device-id">789 123 456</div>
+                            <div>现在</div>
+                            <div><button class="action-btn">连接</button></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showTheme(theme) {
+            // 隐藏所有预览
+            document.querySelectorAll('.preview-window').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 移除所有按钮的active状态
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的主题
+            document.getElementById(theme).style.display = 'block';
+            
+            // 添加按钮active状态
+            document.querySelector(`.theme-btn.${theme}`).classList.add('active');
+        }
+    </script>
+</body>
+</html>

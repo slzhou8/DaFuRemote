@@ -1,0 +1,12 @@
+name: dynamic_layouts
+description: Local lightweight replacement for dynamic wrapping layouts.
+version: 0.0.1+1
+publish_to: "none"
+
+environment:
+  sdk: ">=3.1.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

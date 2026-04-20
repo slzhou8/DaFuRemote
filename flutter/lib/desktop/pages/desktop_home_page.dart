@@ -17,6 +17,8 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/ui_manager.dart';
+import 'package:flutter_hbb/themes/modern_theme.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
 import 'package:get/get.dart';
@@ -32,8 +34,6 @@ class DesktopHomePage extends StatefulWidget {
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
-
-const borderColor = Color(0xFF2F65BA);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -79,6 +79,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildLeftPane(BuildContext context) {
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
       if (bind.isCustomClient())
@@ -115,7 +118,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     ];
     if (isIncomingOnly) {
       children.addAll([
-        Divider(),
+        Divider(color: colors.border),
         OnlineStatusWidget(
           onSvcStatusChanged: () {
             if (isInHomePage()) {
@@ -127,12 +130,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ).marginOnly(bottom: 6, right: 6)
       ]);
     }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final textColor = colors.textPrimary;
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
         width: isIncomingOnly ? 280.0 : 200.0,
-        color: Theme.of(context).colorScheme.background,
+        color: colors.background,
         child: Stack(
           children: [
             Column(
@@ -156,10 +159,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   child: InkWell(
                     child: Obx(
                       () => Icon(
-                        Icons.settings,
+                        Icons.settings_rounded,
                         color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
+                            ? colors.primary
+                            : colors.textTertiary,
                         size: 22,
                       ),
                     ),
@@ -181,14 +184,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   buildRightPane(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: colors.background,
       child: ConnectionPage(),
     );
   }
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 11),
       height: 57,
@@ -197,8 +206,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         textBaseline: TextBaseline.alphabetic,
         children: [
           Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
+            width: 3,
+            decoration: BoxDecoration(color: colors.primary),
           ).marginOnly(top: 5),
           Expanded(
             child: Padding(
@@ -216,13 +225,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           translate("ID"),
                           style: TextStyle(
                               fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
+                              color: colors.textSecondary,
+                              fontWeight: FontWeight.w600),
                         ).marginOnly(top: 5),
-                        buildPopupMenu(context)
+                        buildPopupMenu(context, colors)
                       ],
                     ),
                   ),
@@ -242,6 +248,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         ),
                         style: TextStyle(
                           fontSize: 22,
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
                         ),
                       ).workaroundFreezeLinuxMint(),
                     ),
@@ -255,23 +264,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  Widget buildPopupMenu(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+  Widget buildPopupMenu(BuildContext context, ModernColors colors) {
     RxBool hover = false.obs;
     return InkWell(
       onTap: DesktopTabPage.onAddSetting,
       child: Tooltip(
         message: translate('Settings'),
         child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
+          () => Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: hover.value ? colors.surfaceVariant : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(
-              Icons.more_vert_outlined,
+              Icons.more_horiz_rounded,
               size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
+              color: hover.value ? colors.primary : colors.textTertiary,
             ),
           ),
         ),
@@ -293,7 +302,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildPasswordBoard2(BuildContext context, ServerModel model) {
     RxBool refreshHover = false.obs;
     RxBool editHover = false.obs;
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
@@ -303,9 +314,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         textBaseline: TextBaseline.alphabetic,
         children: [
           Container(
-            width: 2,
+            width: 3,
             height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
+            decoration: BoxDecoration(color: colors.primary),
           ),
           Expanded(
             child: Padding(
@@ -316,7 +327,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   AutoSizeText(
                     translate("One-time Password"),
                     style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
+                        fontSize: 14,
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w600),
                     maxLines: 1,
                   ),
                   Row(
@@ -338,7 +351,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                               contentPadding:
                                   EdgeInsets.only(top: 14, bottom: 10),
                             ),
-                            style: TextStyle(fontSize: 15),
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
                           ).workaroundFreezeLinuxMint(),
                         ),
                       ),
@@ -350,10 +368,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             child: Obx(() => RotatedBox(
                                 quarterTurns: 2,
                                 child: Icon(
-                                  Icons.refresh,
+                                  Icons.refresh_rounded,
                                   color: refreshHover.value
-                                      ? textColor
-                                      : Color(0xFFDDDDDD),
+                                      ? colors.primary
+                                      : colors.textTertiary,
                                   size: 22,
                                 ))),
                           ),
@@ -365,10 +383,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             message: translate('Change Password'),
                             child: Obx(
                               () => Icon(
-                                Icons.edit,
+                                Icons.edit_rounded,
                                 color: editHover.value
-                                    ? textColor
-                                    : Color(0xFFDDDDDD),
+                                    ? colors.primary
+                                    : colors.textTertiary,
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),
@@ -390,6 +408,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildTip(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Padding(
       padding:
           const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
@@ -404,7 +425,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   alignment: Alignment.centerLeft,
                   child: Text(
                     translate("Your Desktop"),
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
             ],
@@ -416,13 +441,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             Text(
               translate("desk_tip"),
               overflow: TextOverflow.clip,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: TextStyle(
+                fontSize: 13,
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
             ),
           if (isOutgoingOnly)
             Text(
               translate("outgoing_only_desk_tip"),
               overflow: TextOverflow.clip,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: TextStyle(
+                fontSize: 13,
+                color: colors.textSecondary,
+                height: 1.5,
+              ),
             ),
         ],
       ),
@@ -469,12 +502,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           bind.mainGotoInstall();
         });
       } else if (bind.mainIsInstalledLowerVersion()) {
-        return buildInstallCard(
-            "Status", "Your installation is lower version.", "Click to upgrade",
-            () async {
-          await rustDeskWinManager.closeAllSubWindows();
-          bind.mainUpdateMe();
-        });
+        return buildInstallCard("Status",
+            "Please use the installer package to upgrade.", "", () async {});
       }
     } else if (isMacOS) {
       final isOutgoingOnly = bind.isOutgoingOnly();
@@ -767,7 +796,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
     bool isChattyMethod(String methodName) {
       switch (methodName) {
-        case kWindowBumpMouse: return true;
+        case kWindowBumpMouse:
+          return true;
       }
 
       return false;
@@ -776,7 +806,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       if (!isChattyMethod(call.method)) {
         debugPrint(
-          "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
+            "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
       }
       if (call.method == kWindowMainWindowOnTop) {
         windowOnTop(null);
@@ -811,9 +841,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           connToken: call.arguments['connToken'],
         );
       } else if (call.method == kWindowBumpMouse) {
-        return RdPlatformChannel.instance.bumpMouse(
-          dx: call.arguments['dx'],
-          dy: call.arguments['dy']);
+        return RdPlatformChannel.instance
+            .bumpMouse(dx: call.arguments['dx'], dy: call.arguments['dy']);
       } else if (call.method == kWindowEventMoveTabToNewWindow) {
         final args = call.arguments.split(',');
         int? windowId;

@@ -1926,7 +1926,21 @@ pub async fn io_loop<T: InvokeUiSession>(handler: Session<T>, round: u32) {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let (sender, mut receiver) = mpsc::unbounded_channel::<Data>();
     *handler.sender.write().unwrap() = Some(sender.clone());
-    let token = LocalConfig::get_option("access_token");
+    // Our custom OSS server uses account auth for device ownership/listing,
+    // but it does not implement the rendezvous token security handshake that
+    // the upstream account connection flow expects. Passing the access token
+    // here would make the client wait for a KeyExchange packet that never
+    // arrives and eventually fail with:
+    // "Failed to secure tcp: deadline has elapsed".
+    //
+    // For the customized DaFu Remote build, keep remote-session connectivity
+    // on the OSS-compatible path by not attaching the account access token to
+    // the rendezvous/relay connection.
+    let token = if crate::common::is_custom_client() {
+        "".to_owned()
+    } else {
+        LocalConfig::get_option("access_token")
+    };
     let key = crate::get_key(false).await;
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     if handler.is_port_forward() {

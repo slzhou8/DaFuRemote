@@ -392,6 +392,8 @@ class _PeersViewState extends State<_PeersView>
       }
     }
 
+    peers = _pinCurrentDevice(peers);
+
     searchText = searchText.trim();
     if (searchText.isEmpty) {
       return peers;
@@ -406,7 +408,18 @@ class _PeersViewState extends State<_PeersView>
       }
     }
 
-    return filteredList;
+    return _pinCurrentDevice(filteredList);
+  }
+
+  List<Peer> _pinCurrentDevice(List<Peer> peers) {
+    final currentDeviceIndex = peers.indexWhere((peer) => peer.isCurrentDevice);
+    if (currentDeviceIndex <= 0) {
+      return peers;
+    }
+
+    final currentDevice = peers.removeAt(currentDeviceIndex);
+    peers.insert(0, currentDevice);
+    return peers;
   }
 }
 

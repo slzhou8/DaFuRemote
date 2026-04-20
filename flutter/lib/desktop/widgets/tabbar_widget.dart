@@ -7,6 +7,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide TabBarTheme;
 import 'package:flutter_hbb/common.dart';
+import '../../themes/modern_theme.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/remote_page.dart';
 import 'package:flutter_hbb/desktop/pages/view_camera_page.dart';
@@ -1455,28 +1456,28 @@ class TabbarTheme extends ThemeExtension<TabbarTheme> {
       required this.selectedTabBackgroundColor});
 
   static const light = TabbarTheme(
-      selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 162, 203, 241),
-      selectedTextColor: Colors.black,
-      unSelectedTextColor: Color.fromARGB(255, 112, 112, 112),
-      selectedIconColor: Color.fromARGB(255, 26, 26, 26),
-      unSelectedIconColor: Color.fromARGB(255, 96, 96, 96),
-      dividerColor: Color.fromARGB(255, 238, 238, 238),
-      hoverColor: Colors.white54,
-      closeHoverColor: Colors.white,
-      selectedTabBackgroundColor: Colors.white54);
+      selectedTabIconColor: ModernTheme.primaryLight,
+      unSelectedTabIconColor: ModernTheme.textTertiaryLight,
+      selectedTextColor: ModernTheme.textPrimaryLight,
+      unSelectedTextColor: ModernTheme.textSecondaryLight,
+      selectedIconColor: ModernTheme.textPrimaryLight,
+      unSelectedIconColor: ModernTheme.textSecondaryLight,
+      dividerColor: ModernTheme.borderLight,
+      hoverColor: ModernTheme.surfaceLight,
+      closeHoverColor: ModernTheme.surfaceVariantLight,
+      selectedTabBackgroundColor: ModernTheme.surfaceVariantLight);
 
   static const dark = TabbarTheme(
-      selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 30, 65, 98),
-      selectedTextColor: Colors.white,
-      unSelectedTextColor: Color.fromARGB(255, 192, 192, 192),
-      selectedIconColor: Color.fromARGB(255, 192, 192, 192),
-      unSelectedIconColor: Color.fromARGB(255, 255, 255, 255),
-      dividerColor: Color.fromARGB(255, 64, 64, 64),
-      hoverColor: Colors.black26,
-      closeHoverColor: Colors.black,
-      selectedTabBackgroundColor: Colors.black26);
+      selectedTabIconColor: ModernTheme.primaryDark,
+      unSelectedTabIconColor: ModernTheme.textTertiaryDark,
+      selectedTextColor: ModernTheme.textPrimaryDark,
+      unSelectedTextColor: ModernTheme.textSecondaryDark,
+      selectedIconColor: ModernTheme.textPrimaryDark,
+      unSelectedIconColor: ModernTheme.textSecondaryDark,
+      dividerColor: ModernTheme.borderDark,
+      hoverColor: ModernTheme.surfaceDark,
+      closeHoverColor: ModernTheme.surfaceVariantDark,
+      selectedTabBackgroundColor: ModernTheme.surfaceVariantDark);
 
   @override
   ThemeExtension<TabbarTheme> copyWith({

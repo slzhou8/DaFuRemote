@@ -53,7 +53,7 @@ pub enum GrabState {
 pub type NotifyMessageBox = fn(String, String, String, String) -> dyn Future<Output = ()>;
 
 // the executable name of the portable version
-pub const PORTABLE_APPNAME_RUNTIME_ENV_KEY: &str = "RUSTDESK_APPNAME";
+pub const PORTABLE_APPNAME_RUNTIME_ENV_KEY: &str = "DAFU_REMOTE_APPNAME";
 
 pub const PLATFORM_WINDOWS: &str = "Windows";
 pub const PLATFORM_LINUX: &str = "Linux";
@@ -128,10 +128,100 @@ pub fn global_init() -> bool {
             crate::server::wayland::init();
         }
     }
+    apply_custom_server_bootstrap();
     true
 }
 
 pub fn global_clean() {}
+
+fn apply_custom_server_bootstrap() {
+    let custom = load_custom_server_bootstrap().or_else(load_embedded_custom_server_bootstrap);
+    let Some(custom) = custom else {
+        return;
+    };
+
+    if !custom.key.trim().is_empty() && get_option("key").trim().is_empty() {
+        set_option("key".to_owned(), custom.key.clone());
+    }
+    if !custom.host.trim().is_empty() && get_option("custom-rendezvous-server").trim().is_empty() {
+        set_option("custom-rendezvous-server".to_owned(), custom.host.clone());
+    }
+    if !custom.api.trim().is_empty() && get_option("api-server").trim().is_empty() {
+        set_option("api-server".to_owned(), custom.api.clone());
+    }
+    if !custom.relay.trim().is_empty() && get_option("relay-server").trim().is_empty() {
+        set_option("relay-server".to_owned(), custom.relay.clone());
+    }
+}
+
+fn load_custom_server_bootstrap() -> Option<crate::custom_server::CustomServer> {
+    let candidates = custom_server_bootstrap_candidates();
+    for path in candidates {
+        let Ok(raw) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        match serde_json::from_str::<crate::custom_server::CustomServer>(&raw) {
+            Ok(custom) => {
+                if custom.host.trim().is_empty()
+                    && custom.api.trim().is_empty()
+                    && custom.relay.trim().is_empty()
+                    && custom.key.trim().is_empty()
+                {
+                    continue;
+                }
+                log::info!("Loaded custom server bootstrap from {}", path.display());
+                return Some(custom);
+            }
+            Err(err) => {
+                log::warn!(
+                    "Failed to parse custom server bootstrap {}: {}",
+                    path.display(),
+                    err
+                );
+            }
+        }
+    }
+    None
+}
+
+fn load_embedded_custom_server_bootstrap() -> Option<crate::custom_server::CustomServer> {
+    let custom = crate::custom_server::CustomServer {
+        key: "YVEmkq919gGznt4pBvcmH1YcRft4PwJS6JY207O12KA=".to_owned(),
+        host: "yc.xiaole888.cn:21116".to_owned(),
+        api: "https://yc.xiaole888.cn/rdadmin-api".to_owned(),
+        relay: "yc.xiaole888.cn:21117".to_owned(),
+    };
+    if custom.host.trim().is_empty()
+        && custom.api.trim().is_empty()
+        && custom.relay.trim().is_empty()
+        && custom.key.trim().is_empty()
+    {
+        None
+    } else {
+        Some(custom)
+    }
+}
+
+fn custom_server_bootstrap_candidates() -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(path) = std::env::var("RUSTDESK_CUSTOM_SERVER_CONFIG") {
+        let path = path.trim();
+        if !path.is_empty() {
+            candidates.push(path.into());
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("custom_server.json"));
+            candidates.push(dir.join("rustdesk_custom_server.json"));
+        }
+    }
+    if let Ok(dir) = std::env::current_dir() {
+        candidates.push(dir.join("custom_server.json"));
+        candidates.push(dir.join("rustdesk_custom_server.json"));
+    }
+    candidates
+}
 
 #[inline]
 pub fn set_server_running(b: bool) {
@@ -940,7 +1030,8 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
-    if is_custom_client() {
+    if builtin_update_disabled() {
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = String::new();
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
@@ -953,6 +1044,10 @@ pub fn check_software_update() {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    if builtin_update_disabled() {
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = String::new();
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();
@@ -1006,13 +1101,36 @@ pub fn get_app_name() -> String {
 }
 
 #[inline]
+pub fn get_app_system_name() -> String {
+    let compact: String = get_app_name()
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+    if compact.is_empty() {
+        "RustDesk".to_owned()
+    } else {
+        compact
+    }
+}
+
+#[inline]
+pub fn get_app_exe_name() -> String {
+    format!("{}.exe", get_app_system_name())
+}
+
+#[inline]
+pub fn get_app_protocol_name() -> String {
+    get_app_system_name().to_lowercase()
+}
+
+#[inline]
 pub fn is_rustdesk() -> bool {
     hbb_common::config::APP_NAME.read().unwrap().eq("RustDesk")
 }
 
 #[inline]
 pub fn get_uri_prefix() -> String {
-    format!("{}://", get_app_name().to_lowercase())
+    format!("{}://", get_app_protocol_name())
 }
 
 #[cfg(target_os = "macos")]
@@ -2283,6 +2401,11 @@ pub fn get_builtin_option(key: &str) -> String {
 #[inline]
 pub fn is_custom_client() -> bool {
     get_app_name() != "RustDesk"
+}
+
+#[inline]
+pub fn builtin_update_disabled() -> bool {
+    true
 }
 
 pub fn verify_login(_raw: &str, _id: &str) -> bool {

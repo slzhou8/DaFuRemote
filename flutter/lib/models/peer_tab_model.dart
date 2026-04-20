@@ -10,13 +10,7 @@ import 'package:get/get.dart';
 import '../common.dart';
 import 'model.dart';
 
-enum PeerTabIndex {
-  recent,
-  fav,
-  lan,
-  ab,
-  group,
-}
+enum PeerTabIndex { recent, fav, lan, ab, group }
 
 class PeerTabModel with ChangeNotifier {
   WeakReference<FFI> parent;
@@ -28,7 +22,7 @@ class PeerTabModel with ChangeNotifier {
     'Favorites',
     'Discovered',
     'Address book',
-    'Accessible devices',
+    'My devices',
   ];
   static const List<IconData> icons = [
     Icons.access_time_filled,
@@ -52,8 +46,11 @@ class PeerTabModel with ChangeNotifier {
         }
         return list;
       }();
-  final List<int> orders =
-      List.generate(maxTabCount, (index) => index, growable: false);
+  final List<int> orders = List.generate(
+    maxTabCount,
+    (index) => index,
+    growable: false,
+  );
   List<int> get visibleEnabledOrderedIndexs =>
       orders.where((e) => isVisibleEnabled[e]).toList();
   List<Peer> _selectedPeers = List.empty(growable: true);
@@ -68,10 +65,22 @@ class PeerTabModel with ChangeNotifier {
   String get lastId => _lastId;
 
   PeerTabModel(this.parent) {
+    if (bind.isCustomClient()) {
+      isEnabled = List.from([
+        false,
+        false,
+        false,
+        false,
+        !(bind.isDisableGroupPanel() || bind.isDisableAccount()),
+      ]);
+      for (int i = 0; i < _isVisible.length; i++) {
+        _isVisible[i] = i == PeerTabIndex.group.index;
+      }
+    }
     // visible
     try {
       final option = bind.getLocalFlutterOption(k: kOptionPeerTabVisible);
-      if (option.isNotEmpty) {
+      if (option.isNotEmpty && !bind.isCustomClient()) {
         List<dynamic> decodeList = jsonDecode(option);
         if (decodeList.length == _isVisible.length) {
           for (int i = 0; i < _isVisible.length; i++) {
@@ -109,8 +118,9 @@ class PeerTabModel with ChangeNotifier {
       debugPrint("failed to get peer tab order list: $e");
     }
     // init currentTab
-    _currentTab =
-        int.tryParse(bind.getLocalFlutterOption(k: kOptionPeerTabIndex)) ?? 0;
+    _currentTab = bind.isCustomClient()
+        ? PeerTabIndex.group.index
+        : int.tryParse(bind.getLocalFlutterOption(k: kOptionPeerTabIndex)) ?? 0;
     if (_currentTab < 0 || _currentTab >= maxTabCount) {
       _currentTab = 0;
     }
@@ -227,7 +237,9 @@ class PeerTabModel with ChangeNotifier {
         }
         try {
           bind.setLocalFlutterOption(
-              k: kOptionPeerTabVisible, v: jsonEncode(_isVisible));
+            k: kOptionPeerTabVisible,
+            v: jsonEncode(_isVisible),
+          );
         } catch (_) {}
         notifyListeners();
       }

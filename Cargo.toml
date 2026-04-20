@@ -1,6 +1,6 @@
 [package]
 name = "rustdesk"
-version = "1.4.6"
+version = "1.4.8"
 authors = ["rustdesk <info@rustdesk.com>"]
 edition = "2021"
 build= "build.rs"
@@ -212,11 +212,27 @@ exclude = ["vdi/host", "examples/custom_plugin"]
 [patch.crates-io]
 libxdo-sys = { path = "libs/libxdo-sys-stub" }
 
+[patch."https://github.com/rustdesk-org/rust-webm"]
+webm = { path = "vendor/rust-webm" }
+
+[patch."https://github.com/rustdesk-org/nokhwa.git"]
+nokhwa = { path = "vendor/nokhwa" }
+nokhwa-core = { path = "vendor/nokhwa/nokhwa-core" }
+nokhwa-bindings-linux = { path = "vendor/nokhwa/nokhwa-bindings-linux" }
+nokhwa-bindings-macos = { path = "vendor/nokhwa/nokhwa-bindings-macos" }
+nokhwa-bindings-windows = { path = "vendor/nokhwa/nokhwa-bindings-windows" }
+
+[patch."https://github.com/rustdesk-org/hwcodec"]
+hwcodec = { path = "vendor/hwcodec" }
+
+[patch."https://github.com/rustdesk-org/keepawake-rs"]
+keepawake = { path = "vendor/keepawake-rs" }
+
 [package.metadata.winres]
 LegalCopyright = "Copyright © 2025 Purslane Ltd. All rights reserved."
-ProductName = "RustDesk"
-FileDescription = "RustDesk Remote Desktop"
-OriginalFilename = "rustdesk.exe"
+ProductName = "DaFu Remote"
+FileDescription = "DaFu Remote Desktop"
+OriginalFilename = "DaFuRemote.exe"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
 winres = "0.1"
@@ -232,8 +248,8 @@ hound = "3.5"
 docopt = "1.1"
 
 [package.metadata.bundle]
-name = "RustDesk"
-identifier = "com.carriez.rustdesk"
+name = "DaFu Remote"
+identifier = "cn.xiaole888.yc.dafuremote"
 icon = ["res/32x32.png", "res/128x128.png", "res/128x128@2x.png"]
 osx_minimum_system_version = "10.14"
 

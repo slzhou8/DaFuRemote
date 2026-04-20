@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../themes/modern_theme.dart';
 
 const sidebarColor = Color(0xFF0C6AF6);
 const backgroundStartColor = Color(0xFF0583EA);

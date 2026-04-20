@@ -14,6 +14,11 @@ from pathlib import Path
 windows = platform.platform().startswith('Windows')
 osx = platform.platform().startswith(
     'Darwin') or platform.platform().startswith("macOS")
+WINDOWS_APP_NAME = 'DaFu Remote'
+WINDOWS_APP_BASENAME = 'DaFuRemote'
+WINDOWS_APP_EXE = WINDOWS_APP_BASENAME + '.exe'
+PORTABLE_OUTPUT_BASENAME = 'DaFuRemotePortable'
+PORTABLE_PACKER_EXE = 'rustdesk-portable-packer.exe'
 hbb_name = 'rustdesk' + ('.exe' if windows else '')
 exe_path = 'target/release/' + hbb_name
 if windows:
@@ -440,26 +445,28 @@ def build_flutter_windows(version, features, skip_portable_pack):
     os.chdir('flutter')
     system2('flutter build windows --release')
     os.chdir('..')
+    shutil.copy2('target/release/librustdesk.dll', flutter_build_dir_2)
     shutil.copy2('target/release/deps/dylib_virtual_display.dll',
                  flutter_build_dir_2)
     if skip_portable_pack:
         return
     os.chdir('libs/portable')
-    system2('pip3 install -r requirements.txt')
+    system2(f'"{sys.executable}" -m pip install -r requirements.txt')
     system2(
-        f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/rustdesk.exe')
+        f'"{sys.executable}" ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/{WINDOWS_APP_EXE}')
     os.chdir('../..')
-    if os.path.exists('./rustdesk_portable.exe'):
-        os.replace('./target/release/rustdesk-portable-packer.exe',
-                   './rustdesk_portable.exe')
+    portable_output = f'./{PORTABLE_OUTPUT_BASENAME}.exe'
+    if os.path.exists(portable_output):
+        os.replace(f'./target/release/{PORTABLE_PACKER_EXE}',
+                   portable_output)
     else:
-        os.rename('./target/release/rustdesk-portable-packer.exe',
-                  './rustdesk_portable.exe')
+        os.rename(f'./target/release/{PORTABLE_PACKER_EXE}',
+                  portable_output)
     print(
-        f'output location: {os.path.abspath(os.curdir)}/rustdesk_portable.exe')
-    os.rename('./rustdesk_portable.exe', f'./rustdesk-{version}-install.exe')
+        f'output location: {os.path.abspath(os.curdir)}/{PORTABLE_OUTPUT_BASENAME}.exe')
+    os.rename(portable_output, f'./{WINDOWS_APP_BASENAME}-{version}-install.exe')
     print(
-        f'output location: {os.path.abspath(os.curdir)}/rustdesk-{version}-install.exe')
+        f'output location: {os.path.abspath(os.curdir)}/{WINDOWS_APP_BASENAME}-{version}-install.exe')
 
 
 def main():
@@ -497,22 +504,22 @@ def main():
             return
         system2('cargo build --release --features ' + features)
         # system2('upx.exe target/release/rustdesk.exe')
-        system2('mv target/release/rustdesk.exe target/release/RustDesk.exe')
+        system2(f'mv target/release/rustdesk.exe target/release/{WINDOWS_APP_EXE}')
         pa = os.environ.get('P')
         if pa:
             # https://certera.com/kb/tutorial-guide-for-safenet-authentication-client-for-code-signing/
             system2(
                 f'signtool sign /a /v /p {pa} /debug /f .\\cert.pfx /t http://timestamp.digicert.com  '
-                'target\\release\\rustdesk.exe')
+                f'target\\release\\{WINDOWS_APP_EXE}')
         else:
             print('Not signed')
         system2(
-            f'cp -rf target/release/RustDesk.exe {res_dir}')
+            f'cp -rf target/release/{WINDOWS_APP_EXE} {res_dir}')
         os.chdir('libs/portable')
         system2('pip3 install -r requirements.txt')
         system2(
-            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
-        system2('mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
+            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/{WINDOWS_APP_EXE}')
+        system2(f'mv ../../target/release/{PORTABLE_PACKER_EXE} ../../{WINDOWS_APP_BASENAME}-{version}-win7-install.exe')
     elif os.path.isfile('/usr/bin/pacman'):
         # pacman -S -needed base-devel
         system2("sed -i 's/pkgver=.*/pkgver=%s/g' res/PKGBUILD" % version)

@@ -59,7 +59,7 @@ fn has_no_controlling_conns() -> bool {
 
 #[cfg(not(any(not(target_os = "windows"), feature = "flutter")))]
 fn has_no_controlling_conns() -> bool {
-    let app_exe = format!("{}.exe", crate::get_app_name().to_lowercase());
+    let app_exe = crate::get_app_exe_name();
     for arg in [
         "--connect",
         "--play",
@@ -118,6 +118,9 @@ fn start_auto_update_check_(rx_msg: Receiver<UpdateMsg>) {
 }
 
 fn check_update(manually: bool) -> ResultType<()> {
+    if crate::common::builtin_update_disabled() {
+        return Ok(());
+    }
     #[cfg(target_os = "windows")]
     let update_msi = crate::platform::is_msi_installed()? && !crate::is_custom_client();
     if !(manually || config::Config::get_bool_option(config::keys::OPTION_ALLOW_AUTO_UPDATE)) {

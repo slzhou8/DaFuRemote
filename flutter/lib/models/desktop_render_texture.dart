@@ -11,6 +11,8 @@ import './platform_model.dart';
 import 'package:texture_rgba_renderer/texture_rgba_renderer.dart'
     if (dart.library.html) 'package:flutter_hbb/web/texture_rgba_renderer.dart';
 
+const bool kEnableGpuTextureRenderer = false;
+
 class _PixelbufferTexture {
   int _textureKey = -1;
   int _display = 0;
@@ -59,7 +61,7 @@ class _PixelbufferTexture {
 class _GpuTexture {
   int _textureId = -1;
   SessionID? _sessionId;
-  final support = bind.mainHasGpuTextureRender();
+  final support = kEnableGpuTextureRenderer && bind.mainHasGpuTextureRender();
   bool _destroying = false;
   int _display = 0;
   int? _id;
@@ -150,7 +152,8 @@ class TextureModel {
   setTextureType({required int display, required bool gpuTexture}) {
     debugPrint("setTextureType: display=$display, isGpuTexture=$gpuTexture");
     ensureControl(display);
-    _control[display]?.setTextureType(gpuTexture: gpuTexture);
+    final useGpuTexture = kEnableGpuTextureRenderer && gpuTexture;
+    _control[display]?.setTextureType(gpuTexture: useGpuTexture);
     // For versions that do not support multiple displays, the display parameter is always 0, need set type of current display
     final ffi = parent.target;
     if (ffi == null) return;
@@ -158,9 +161,9 @@ class TextureModel {
       final currentDisplay = CurrentDisplayState.find(ffi.id).value;
       if (currentDisplay != display) {
         debugPrint(
-            "setTextureType: currentDisplay=$currentDisplay, isGpuTexture=$gpuTexture");
+            "setTextureType: currentDisplay=$currentDisplay, isGpuTexture=$useGpuTexture");
         ensureControl(currentDisplay);
-        _control[currentDisplay]?.setTextureType(gpuTexture: gpuTexture);
+        _control[currentDisplay]?.setTextureType(gpuTexture: useGpuTexture);
       }
     }
   }

@@ -325,6 +325,7 @@ class LoginWidgetUserPass extends StatelessWidget {
   final bool isInProgress;
   final RxString curOP;
   final Function() onLogin;
+  final Function()? onRegister;
   final FocusNode? userFocusNode;
   const LoginWidgetUserPass({
     Key? key,
@@ -336,6 +337,7 @@ class LoginWidgetUserPass extends StatelessWidget {
     required this.isInProgress,
     required this.curOP,
     required this.onLogin,
+    this.onRegister,
   }) : super(key: key);
 
   @override
@@ -366,7 +368,7 @@ class LoginWidgetUserPass extends StatelessWidget {
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Container(
                 height: 38,
-                width: 200,
+                width: onRegister == null ? 200 : 96,
                 child: Obx(() => ElevatedButton(
                       child: Text(
                         translate('Login'),
@@ -380,6 +382,19 @@ class LoginWidgetUserPass extends StatelessWidget {
                               : null,
                     )),
               ),
+              if (onRegister != null) const SizedBox(width: 8),
+              if (onRegister != null)
+                Container(
+                  height: 38,
+                  width: 96,
+                  child: ElevatedButton(
+                    onPressed: isInProgress ? null : onRegister,
+                    child: Text(
+                      translate('Register'),
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
             ])),
           ],
         ));
@@ -404,6 +419,7 @@ Future<bool?> loginDialog() async {
   bool isCloseHovered = false;
 
   final loginOptions = [].obs;
+  var openRegister = false;
   Future.delayed(Duration.zero, () async {
     loginOptions.value = await UserModel.queryOidcLoginOptions();
   });
@@ -422,6 +438,12 @@ Future<bool?> loginDialog() async {
     });
 
     onDialogCancel() {
+      isInProgress = false;
+      close(false);
+    }
+
+    onOpenRegister() {
+      openRegister = true;
       isInProgress = false;
       close(false);
     }
@@ -603,6 +625,7 @@ Future<bool?> loginDialog() async {
             isInProgress: isInProgress,
             curOP: curOP,
             onLogin: onLogin,
+            onRegister: onOpenRegister,
             userFocusNode: userFocusNode,
           ),
           thirdAuthWidget(),
@@ -613,7 +636,136 @@ Future<bool?> loginDialog() async {
     );
   });
 
-  if (res != null) {
+  if (res == true) {
+    await UserModel.updateOtherModels();
+  }
+
+  if (openRegister) {
+    return registerDialog();
+  }
+
+  return res;
+}
+
+Future<bool?> registerDialog() async {
+  final username = TextEditingController();
+  final password = TextEditingController();
+  final confirmPassword = TextEditingController();
+  final userFocusNode = FocusNode()..requestFocus();
+  Timer(Duration(milliseconds: 100), () => userFocusNode..requestFocus());
+
+  String? usernameMsg;
+  String? passwordMsg;
+  String? confirmPasswordMsg;
+  var isInProgress = false;
+
+  final res = await gFFI.dialogManager.show<bool>((setState, close, context) {
+    username.addListener(() {
+      if (usernameMsg != null) {
+        setState(() => usernameMsg = null);
+      }
+    });
+    password.addListener(() {
+      if (passwordMsg != null) {
+        setState(() => passwordMsg = null);
+      }
+    });
+    confirmPassword.addListener(() {
+      if (confirmPasswordMsg != null) {
+        setState(() => confirmPasswordMsg = null);
+      }
+    });
+
+    onRegister() async {
+      if (username.text.trim().isEmpty) {
+        setState(() => usernameMsg = translate('Username missed'));
+        return;
+      }
+      if (password.text.isEmpty) {
+        setState(() => passwordMsg = translate('Password missed'));
+        return;
+      }
+      if (password.text.length < 6) {
+        setState(() =>
+            passwordMsg = translate('Password must be at least 6 characters.'));
+        return;
+      }
+      if (confirmPassword.text.isEmpty) {
+        setState(() => confirmPasswordMsg = translate('Password missed'));
+        return;
+      }
+      if (password.text != confirmPassword.text) {
+        setState(
+            () => confirmPasswordMsg = translate('Passwords do not match.'));
+        return;
+      }
+
+      setState(() => isInProgress = true);
+      try {
+        final resp = await gFFI.userModel.register(RegisterRequest(
+          username: username.text.trim(),
+          password: password.text,
+          displayName: username.text.trim(),
+          id: await bind.mainGetMyId(),
+          uuid: await bind.mainGetUuid(),
+        ));
+        if (resp.access_token != null) {
+          await bind.mainSetLocalOption(
+              key: 'access_token', value: resp.access_token!);
+          await bind.mainSetLocalOption(
+              key: 'user_info', value: jsonEncode(resp.user ?? {}));
+          close(true);
+          return;
+        }
+        setState(() => passwordMsg = 'Failed, bad response from server');
+      } on RequestException catch (err) {
+        setState(() => passwordMsg = translate(err.cause));
+      } catch (err) {
+        setState(() => passwordMsg = "Unknown Error: $err");
+      }
+      setState(() => isInProgress = false);
+    }
+
+    return CustomAlertDialog(
+      title: Text(translate('Register')),
+      contentBoxConstraints: BoxConstraints(minWidth: 400),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 8.0),
+          DialogTextField(
+            title: translate(DialogTextField.kUsernameTitle),
+            controller: username,
+            focusNode: userFocusNode,
+            prefixIcon: DialogTextField.kUsernameIcon,
+            errorText: usernameMsg,
+          ),
+          PasswordWidget(
+            controller: password,
+            autoFocus: false,
+            reRequestFocus: true,
+            errorText: passwordMsg,
+          ),
+          PasswordWidget(
+            controller: confirmPassword,
+            autoFocus: false,
+            reRequestFocus: true,
+            title: 'Confirm Password',
+            errorText: confirmPasswordMsg,
+          ),
+          if (isInProgress) const LinearProgressIndicator(),
+        ],
+      ),
+      onCancel: close,
+      onSubmit: onRegister,
+      actions: [
+        dialogButton(translate('Cancel'), onPressed: close, isOutline: true),
+        dialogButton(translate('Register'), onPressed: onRegister),
+      ],
+    );
+  });
+
+  if (res == true) {
     await UserModel.updateOtherModels();
   }
 

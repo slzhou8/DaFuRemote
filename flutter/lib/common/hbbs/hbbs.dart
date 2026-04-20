@@ -177,6 +177,43 @@ class LoginRequest {
   }
 }
 
+class RegisterRequest {
+  String? username;
+  String? password;
+  String? id;
+  String? uuid;
+  String? displayName;
+  String? email;
+
+  RegisterRequest({
+    this.username,
+    this.password,
+    this.id,
+    this.uuid,
+    this.displayName,
+    this.email,
+  });
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    if (username != null) data['username'] = username;
+    if (password != null) data['password'] = password;
+    if (id != null) data['id'] = id;
+    if (uuid != null) data['uuid'] = uuid;
+    if (displayName != null) data['display_name'] = displayName;
+    if (email != null) data['email'] = email;
+
+    Map<String, dynamic> deviceInfo = {};
+    try {
+      deviceInfo = jsonDecode(bind.mainGetLoginDeviceInfo());
+    } catch (e) {
+      debugPrint('Failed to decode get device info: $e');
+    }
+    data['deviceInfo'] = deviceInfo;
+    return data;
+  }
+}
+
 class LoginResponse {
   String? access_token;
   String? type;

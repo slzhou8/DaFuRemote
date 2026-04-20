@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # 1.1.9-1 works for android, but for ios it becomes 1.1.91, need to set it to 1.1.9-a.1 for iOS, will get 1.1.9.1, but iOS store not allow 4 numbers
-version: 1.4.6+64
+version: 1.4.8+66
 
 environment:
   sdk: '^3.1.0'
@@ -38,9 +38,7 @@ dependencies:
   url_launcher: ^6.3.1
   url_launcher_ios: ^6.3.2
   toggle_switch: ^2.1.0
-  dash_chat_2:
-    git:
-      url: https://github.com/rustdesk-org/Dash-Chat-2
+  dash_chat_2: 0.0.18
   draggable_float_widget: ^0.1.0
   settings_ui: ^2.0.2
   flutter_breadcrumb: ^1.0.1
@@ -52,18 +50,12 @@ dependencies:
   back_button_interceptor: ^6.0.1
   flutter_rust_bridge: "1.80.1"
   window_manager:
-    git:
-      url: https://github.com/rustdesk-org/window_manager
+    path: third_party/window_manager
   desktop_multi_window:
-    git:
-      url: https://github.com/rustdesk-org/rustdesk_desktop_multi_window
+    path: third_party/desktop_multi_window
   freezed_annotation: ^2.0.3
   flutter_custom_cursor: ^0.0.4
-  window_size:
-    git:
-      url: https://github.com/google/flutter-desktop-embedding.git
-      path: plugins/window_size
-      ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601
+  window_size: 0.1.0
   get: ^4.6.5
   visibility_detector: ^0.4.0+2
   contextmenu: ^3.0.0
@@ -72,11 +64,7 @@ dependencies:
   debounce_throttle: ^2.0.0
   file_picker: ^5.1.0
   flutter_svg: ^2.0.5
-  uni_links:
-    git:
-      url: https://github.com/rustdesk-org/uni_links
-      path: uni_links
-      ref: f416118d843a7e9ed117c7bb7bdc2deda5a9e86f
+  uni_links: 0.5.1
   uni_links_desktop: ^0.1.6 # use 0.1.6 to make flutter 3.13 works
   path: ^1.8.1
   auto_size_text: ^3.0.0
@@ -86,26 +74,20 @@ dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_keyboard_visibility: ^5.4.0
   texture_rgba_renderer:
-    git:
-      url: https://github.com/rustdesk-org/flutter_texture_rgba_renderer
-      ref: 42797e0f03141dc2b585f76c64a13974508058b4
+    path: third_party/texture_rgba_renderer
   percent_indicator: ^4.2.2
   dropdown_button2: ^2.0.0
   flutter_gpu_texture_renderer:
-    git:
-      url: https://github.com/rustdesk-org/flutter_gpu_texture_renderer
-      ref: 08a471bb8ceccdd50483c81cdfa8b81b07b14b87
+    path: third_party/flutter_gpu_texture_renderer
   uuid: ^3.0.7
   auto_size_text_field: ^2.2.1
   flex_color_picker: ^3.3.0
   dynamic_layouts:
-    git:
-      url: https://github.com/rustdesk-org/dynamic_layouts.git
-      ref: 24cb88413fa5181d949ddacbb30a65d5c459e7d9
+    path: third_party/dynamic_layouts
   pull_down_button: ^0.9.3
   device_info_plus: ^9.1.0
   qr_flutter: ^4.1.0
-  extended_text: 14.0.0
+  extended_text: 13.1.0
   xterm: 4.0.0
   sqflite: 2.2.0
   google_fonts: ^6.2.1

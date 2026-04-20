@@ -76,6 +76,7 @@ class GroupModel {
     if (!await _getPeers(tmpPeers)) {
       return;
     }
+    await _markCurrentDevice(tmpPeers);
     deviceGroups.value = tmpDeviceGroups;
     // me first
     var index = tmpUsers
@@ -335,10 +336,19 @@ class GroupModel {
         for (final peer in data['peers']) {
           peers.add(Peer.fromJson(peer));
         }
+        await _markCurrentDevice(peers);
         _callbackPeerUpdate();
       }
     } catch (e) {
       debugPrint("load group cache: $e");
+    }
+  }
+
+  Future<void> _markCurrentDevice(List<Peer> peers) async {
+    final myId = (await bind.mainGetMyId()).replaceAll(' ', '');
+    for (final peer in peers) {
+      peer.isCurrentDevice = myId.isNotEmpty &&
+          peer.id.replaceAll(' ', '') == myId;
     }
   }
 

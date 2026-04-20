@@ -4,6 +4,7 @@ import 'package:auto_size_text_field/auto_size_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
+import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_hbb/models/peer_model.dart';
 import '../../common.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
+import '../../common/widgets/login.dart';
 import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
@@ -80,27 +82,91 @@ class _ConnectionPageState extends State<ConnectionPage> {
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return CustomScrollView(
-      slivers: [
-        SliverList(
+    final showDirectConnect = !bind.isCustomClient();
+    return Obx(() {
+      final isLoggedIn = gFFI.userModel.isLogin;
+      if (!isLoggedIn) {
+        return SingleChildScrollView(
+          child: _buildLoginRequiredCard(context),
+        ).marginOnly(top: 2, left: 10, right: 10);
+      }
+      return CustomScrollView(
+        slivers: [
+          SliverList(
             delegate: SliverChildListDelegate([
-          if (!bind.isCustomClient() && !isIOS)
-            Obx(() => _buildUpdateUI(stateGlobal.updateUrl.value)),
-          _buildRemoteIDTextField(),
-        ])),
-        SliverFillRemaining(
-          hasScrollBody: true,
-          child: PeerTabPage(),
-        )
-      ],
-    ).marginOnly(top: 2, left: 10, right: 10);
+              if (!bind.isCustomClient() && !isIOS)
+                Obx(() => _buildUpdateUI(stateGlobal.updateUrl.value)),
+              if (showDirectConnect) _buildRemoteIDTextField(),
+            ]),
+          ),
+          SliverFillRemaining(hasScrollBody: true, child: PeerTabPage()),
+        ],
+      ).marginOnly(top: 2, left: 10, right: 10);
+    });
   }
 
   /// Callback for the connect button.
   /// Connects to the selected peer.
   void onConnect() {
+    if (!gFFI.userModel.isLogin) {
+      _loginAndFocusMyDevices();
+      return;
+    }
     var id = _idController.id;
     connect(context, id);
+  }
+
+  Future<void> _focusMyDevicesTab() async {
+    gFFI.peerTabModel.setCurrentTab(PeerTabIndex.group.index);
+    await bind.setLocalFlutterOption(
+      k: kOptionPeerTabIndex,
+      v: PeerTabIndex.group.index.toString(),
+    );
+  }
+
+  Future<void> _loginAndFocusMyDevices() async {
+    final loggedIn = await loginDialog();
+    if (loggedIn == true) {
+      await _focusMyDevicesTab();
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Widget _buildLoginRequiredCard(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.lock_outline, size: 42, color: MyTheme.accent),
+          const SizedBox(height: 16),
+          Text(
+            '$appName login required',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Please sign in to $appName before starting a remote session. After login, the client will show the devices under the current account.',
+            style: TextStyle(color: textColor?.withOpacity(0.8), height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 18),
+          ElevatedButton(
+            onPressed: _loginAndFocusMyDevices,
+            child: Text(translate('Login')),
+          ),
+        ],
+      ),
+    );
   }
 
   void onFocusChanged() {
@@ -112,8 +178,10 @@ class _ConnectionPageState extends State<ConnectionPage> {
 
       final textLength = _idEditingController.value.text.length;
       // Select all to facilitate removing text, just following the behavior of address input of chrome.
-      _idEditingController.selection =
-          TextSelection(baseOffset: 0, extentOffset: textLength);
+      _idEditingController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: textLength,
+      );
     }
   }
 
@@ -136,13 +204,19 @@ class _ConnectionPageState extends State<ConnectionPage> {
               await launchUrl(Uri.parse(url));
             },
             child: Container(
-                alignment: AlignmentDirectional.center,
-                width: double.infinity,
-                color: Colors.pinkAccent,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(translate('Download new version'),
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold))));
+              alignment: AlignmentDirectional.center,
+              width: double.infinity,
+              color: Colors.pinkAccent,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                translate('Download new version'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
   }
 
   /// UI for the remote ID TextField.
@@ -197,27 +271,33 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         String textToFind = textEditingValue.text.toLowerCase();
 
                         _autocompleteOpts = _allPeersLoader.peers
-                            .where((peer) =>
-                                peer.id.toLowerCase().contains(textToFind) ||
-                                peer.username
-                                    .toLowerCase()
-                                    .contains(textToFind) ||
-                                peer.hostname
-                                    .toLowerCase()
-                                    .contains(textToFind) ||
-                                peer.alias.toLowerCase().contains(textToFind))
+                            .where(
+                              (peer) =>
+                                  peer.id.toLowerCase().contains(textToFind) ||
+                                  peer.username.toLowerCase().contains(
+                                        textToFind,
+                                      ) ||
+                                  peer.hostname.toLowerCase().contains(
+                                        textToFind,
+                                      ) ||
+                                  peer.alias.toLowerCase().contains(textToFind),
+                            )
                             .toList();
                       }
                       return _autocompleteOpts;
                     },
                     focusNode: _idFocusNode,
                     textEditingController: _idEditingController,
-                    fieldViewBuilder: (BuildContext context,
-                        TextEditingController fieldTextEditingController,
-                        FocusNode fieldFocusNode,
-                        VoidCallback onFieldSubmitted) {
+                    fieldViewBuilder: (
+                      BuildContext context,
+                      TextEditingController fieldTextEditingController,
+                      FocusNode fieldFocusNode,
+                      VoidCallback onFieldSubmitted,
+                    ) {
                       updateTextAndPreserveSelection(
-                          fieldTextEditingController, _idController.text);
+                        fieldTextEditingController,
+                        _idController.text,
+                      );
                       return AutoSizeTextField(
                         controller: fieldTextEditingController,
                         focusNode: fieldFocusNode,
@@ -263,9 +343,11 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         FocusScope.of(context).unfocus();
                       });
                     },
-                    optionsViewBuilder: (BuildContext context,
-                        AutocompleteOnSelected<Peer> onSelected,
-                        Iterable<Peer> options) {
+                    optionsViewBuilder: (
+                      BuildContext context,
+                      AutocompleteOnSelected<Peer> onSelected,
+                      Iterable<Peer> options,
+                    ) {
                       options = _autocompleteOpts;
                       double maxHeight = options.length * 50;
                       if (options.length == 1) {
@@ -277,68 +359,79 @@ class _ConnectionPageState extends State<ConnectionPage> {
                       }
                       maxHeight = maxHeight.clamp(0, 200);
                       return Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    blurRadius: 5,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
+                        alignment: Alignment.topLeft,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 5,
+                                spreadRadius: 1,
                               ),
-                              child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(5),
-                                  child: Material(
-                                      elevation: 4,
-                                      child: ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                            maxHeight: maxHeight,
-                                            maxWidth: 320,
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: Material(
+                              elevation: 4,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: maxHeight,
+                                  maxWidth: 320,
+                                ),
+                                child: _allPeersLoader.peers.isEmpty &&
+                                        !_allPeersLoader.isPeersLoaded
+                                    ? Container(
+                                        height: 80,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
-                                          child: _allPeersLoader
-                                                      .peers.isEmpty &&
-                                                  !_allPeersLoader.isPeersLoaded
-                                              ? Container(
-                                                  height: 80,
-                                                  child: Center(
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                  )))
-                                              : ListView(
-                                                  padding:
-                                                      EdgeInsets.only(top: 5),
-                                                  children: options
-                                                      .map((peer) =>
-                                                          AutocompletePeerTile(
-                                                              onSelect: () =>
-                                                                  onSelected(
-                                                                      peer),
-                                                              peer: peer))
-                                                      .toList(),
-                                                ))))));
+                                        ),
+                                      )
+                                    : ListView(
+                                        padding: EdgeInsets.only(top: 5),
+                                        children: options
+                                            .map(
+                                              (peer) => AutocompletePeerTile(
+                                                onSelect: () =>
+                                                    onSelected(peer),
+                                                peer: peer,
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
               ),
-              Obx(() => Offstage(
-                    offstage: _idEmpty.value,
-                    child: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _idController.clear();
-                          });
-                        },
-                        icon: Icon(Icons.clear, color: MyTheme.darkGray)),
-                  )),
+              Obx(
+                () => Offstage(
+                  offstage: _idEmpty.value,
+                  child: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _idController.clear();
+                      });
+                    },
+                    icon: Icon(Icons.clear, color: MyTheme.darkGray),
+                  ),
+                ),
+              ),
               SizedBox(
                 width: 60,
                 height: 60,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_forward,
-                      color: MyTheme.darkGray, size: 45),
+                  icon: const Icon(
+                    Icons.arrow_forward,
+                    color: MyTheme.darkGray,
+                    size: 45,
+                  ),
                   onPressed: onConnect,
                 ),
               ),
@@ -347,15 +440,20 @@ class _ConnectionPageState extends State<ConnectionPage> {
         ),
       ),
     );
-    final child = Column(children: [
-      if (isWebDesktop)
-        getConnectionPageTitle(context, true)
-            .marginOnly(bottom: 10, top: 15, left: 12),
-      w
-    ]);
+    final child = Column(
+      children: [
+        if (isWebDesktop)
+          getConnectionPageTitle(
+            context,
+            true,
+          ).marginOnly(bottom: 10, top: 15, left: 12),
+        w,
+      ],
+    );
     return Align(
-        alignment: Alignment.topCenter,
-        child: Container(constraints: kMobilePageConstraints, child: child));
+      alignment: Alignment.topCenter,
+      child: Container(constraints: kMobilePageConstraints, child: child),
+    );
   }
 
   @override

@@ -6,9 +6,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
+import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/themes/modern_theme.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
@@ -66,16 +70,25 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   @override
   Widget build(BuildContext context) {
     final isIncomingOnly = bind.isIncomingOnly();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     startServiceWidget() => Offstage(
           offstage: !_svcStopped.value,
           child: InkWell(
-                  onTap: () async {
-                    await start_service(true);
-                  },
-                  child: Text(translate("Start service"),
-                      style: TextStyle(
-                          decoration: TextDecoration.underline, fontSize: em)))
-              .marginOnly(left: em),
+            onTap: () async {
+              await start_service(true);
+            },
+            child: Text(
+              translate("Start service"),
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+                fontSize: em,
+                color: colors.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ).marginOnly(left: em),
         );
 
     setupServerWidget() => Flexible(
@@ -96,14 +109,17 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                           child: Text(
                             translate('setup_server_tip'),
                             style: TextStyle(
-                                decoration: TextDecoration.underline,
-                                fontSize: em),
+                              decoration: TextDecoration.underline,
+                              fontSize: em,
+                              color: colors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -119,15 +135,15 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 borderRadius: BorderRadius.circular(4),
                 color: _svcStopped.value ||
                         stateGlobal.svcStatus.value == SvcStatus.connecting
-                    ? kColorWarn
+                    ? colors.warning
                     : (stateGlobal.svcStatus.value == SvcStatus.ready
-                        ? Color.fromARGB(255, 50, 190, 166)
-                        : Color.fromARGB(255, 224, 79, 95)),
+                        ? colors.success
+                        : colors.error),
               ),
             ).marginSymmetric(horizontal: em),
             Container(
               width: isIncomingOnly ? 226 : null,
-              child: _buildConnStatusMsg(),
+              child: _buildConnStatusMsg(context, colors),
             ),
             // stop
             if (!isIncomingOnly) startServiceWidget(),
@@ -139,21 +155,23 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
 
     return Container(
       height: height,
-      child: Obx(() => isIncomingOnly
-          ? Column(
-              children: [
-                basicWidget(),
-                Align(
-                        child: startServiceWidget(),
-                        alignment: Alignment.centerLeft)
-                    .marginOnly(top: 2.0, left: 22.0),
-              ],
-            )
-          : basicWidget()),
+      child: Obx(
+        () => isIncomingOnly
+            ? Column(
+                children: [
+                  basicWidget(),
+                  Align(
+                    child: startServiceWidget(),
+                    alignment: Alignment.centerLeft,
+                  ).marginOnly(top: 2.0, left: 22.0),
+                ],
+              )
+            : basicWidget(),
+      ),
     ).paddingOnly(right: isIncomingOnly ? 8 : 0);
   }
 
-  _buildConnStatusMsg() {
+  _buildConnStatusMsg(BuildContext context, ModernColors colors) {
     widget.onSvcStatusChanged?.call();
     return Text(
       _svcStopped.value
@@ -163,7 +181,11 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               : stateGlobal.svcStatus.value == SvcStatus.notReady
                   ? translate("not_ready_status")
                   : translate('Ready'),
-      style: TextStyle(fontSize: em),
+      style: TextStyle(
+        fontSize: em,
+        color: colors.textPrimary,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 
@@ -296,57 +318,209 @@ class _ConnectionPageState extends State<ConnectionPage>
 
       final textLength = _idEditingController.value.text.length;
       // Select all to facilitate removing text, just following the behavior of address input of chrome.
-      _idEditingController.selection =
-          TextSelection(baseOffset: 0, extentOffset: textLength);
+      _idEditingController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: textLength,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
-    return Column(
-      children: [
-        Expanded(
-            child: Column(
-          children: [
-            Row(
-              children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
-              ],
-            ).marginOnly(top: 22),
-            SizedBox(height: 12),
-            Divider().paddingOnly(right: 12),
-            Expanded(child: PeerTabPage()),
-          ],
-        ).paddingOnly(left: 12.0)),
-        if (!isOutgoingOnly) const Divider(height: 1),
-        if (!isOutgoingOnly) OnlineStatusWidget()
-      ],
-    );
+    final showDirectConnect = !bind.isCustomClient();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
+    return Obx(() {
+      final isLoggedIn = gFFI.userModel.isLogin;
+      return Column(
+        children: [
+          Expanded(
+            child: (isLoggedIn
+                    ? Column(
+                        children: [
+                          if (showDirectConnect)
+                            Row(
+                              children: [
+                                Flexible(
+                                  child:
+                                      _buildRemoteIDTextField(context, colors),
+                                ),
+                              ],
+                            ).marginOnly(top: 22),
+                          if (showDirectConnect) SizedBox(height: 12),
+                          if (showDirectConnect)
+                            Divider(color: colors.border)
+                                .paddingOnly(right: 12),
+                          Expanded(child: PeerTabPage()),
+                        ],
+                      )
+                    : Center(child: _buildLoginRequiredCard(context, colors)))
+                .paddingOnly(left: 12.0),
+          ),
+          if (!isOutgoingOnly) Divider(height: 1, color: colors.border),
+          if (!isOutgoingOnly) OnlineStatusWidget(),
+        ],
+      );
+    });
   }
 
   /// Callback for the connect button.
   /// Connects to the selected peer.
-  void onConnect(
-      {bool isFileTransfer = false,
-      bool isViewCamera = false,
-      bool isTerminal = false}) {
+  void onConnect({
+    bool isFileTransfer = false,
+    bool isViewCamera = false,
+    bool isTerminal = false,
+  }) {
+    if (!gFFI.userModel.isLogin) {
+      _loginAndFocusMyDevices();
+      return;
+    }
     var id = _idController.id;
-    connect(context, id,
-        isFileTransfer: isFileTransfer,
-        isViewCamera: isViewCamera,
-        isTerminal: isTerminal);
+    connect(
+      context,
+      id,
+      isFileTransfer: isFileTransfer,
+      isViewCamera: isViewCamera,
+      isTerminal: isTerminal,
+    );
+  }
+
+  Future<void> _focusMyDevicesTab() async {
+    gFFI.peerTabModel.setCurrentTab(PeerTabIndex.group.index);
+    await bind.setLocalFlutterOption(
+      k: kOptionPeerTabIndex,
+      v: PeerTabIndex.group.index.toString(),
+    );
+  }
+
+  Future<void> _loginAndFocusMyDevices() async {
+    final loggedIn = await loginDialog();
+    if (loggedIn == true) {
+      await _focusMyDevicesTab();
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _registerAndFocusMyDevices() async {
+    final loggedIn = await registerDialog();
+    if (loggedIn == true) {
+      await _focusMyDevicesTab();
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Widget _buildLoginRequiredCard(BuildContext context, ModernColors colors) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 560),
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        border: Border.all(color: colors.border),
+        color: colors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: colors.textPrimary.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(Icons.lock_outline, size: 42, color: colors.primary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '$appName login required',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Please sign in to $appName before starting a remote session. After login, the client will show the devices under the current account.',
+            style: TextStyle(
+              color: colors.textSecondary,
+              height: 1.5,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: _loginAndFocusMyDevices,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(translate('Login'),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _registerAndFocusMyDevices,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.secondary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(translate('Register'),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   /// UI for the remote ID TextField.
   /// Search for a peer.
-  Widget _buildRemoteIDTextField(BuildContext context) {
+  Widget _buildRemoteIDTextField(BuildContext context, ModernColors colors) {
     var w = Container(
       width: 320 + 20 * 2,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        border: Border.all(color: colors.border),
+        color: colors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: colors.textPrimary.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Ink(
         child: Column(
           children: [
@@ -354,84 +528,93 @@ class _ConnectionPageState extends State<ConnectionPage>
             Row(
               children: [
                 Expanded(
-                    child: RawAutocomplete<Peer>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text == '') {
-                      _autocompleteOpts = const Iterable<Peer>.empty();
-                    } else if (_allPeersLoader.peers.isEmpty &&
-                        !_allPeersLoader.isPeersLoaded) {
-                      Peer emptyPeer = Peer(
-                        id: '',
-                        username: '',
-                        hostname: '',
-                        alias: '',
-                        platform: '',
-                        tags: [],
-                        hash: '',
-                        password: '',
-                        forceAlwaysRelay: false,
-                        rdpPort: '',
-                        rdpUsername: '',
-                        loginName: '',
-                        device_group_name: '',
-                        note: '',
-                      );
-                      _autocompleteOpts = [emptyPeer];
-                    } else {
-                      String textWithoutSpaces =
-                          textEditingValue.text.replaceAll(" ", "");
-                      if (int.tryParse(textWithoutSpaces) != null) {
-                        textEditingValue = TextEditingValue(
-                          text: textWithoutSpaces,
-                          selection: textEditingValue.selection,
+                  child: RawAutocomplete<Peer>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text == '') {
+                        _autocompleteOpts = const Iterable<Peer>.empty();
+                      } else if (_allPeersLoader.peers.isEmpty &&
+                          !_allPeersLoader.isPeersLoaded) {
+                        Peer emptyPeer = Peer(
+                          id: '',
+                          username: '',
+                          hostname: '',
+                          alias: '',
+                          platform: '',
+                          tags: [],
+                          hash: '',
+                          password: '',
+                          forceAlwaysRelay: false,
+                          rdpPort: '',
+                          rdpUsername: '',
+                          loginName: '',
+                          device_group_name: '',
+                          note: '',
                         );
+                        _autocompleteOpts = [emptyPeer];
+                      } else {
+                        String textWithoutSpaces =
+                            textEditingValue.text.replaceAll(" ", "");
+                        if (int.tryParse(textWithoutSpaces) != null) {
+                          textEditingValue = TextEditingValue(
+                            text: textWithoutSpaces,
+                            selection: textEditingValue.selection,
+                          );
+                        }
+                        String textToFind = textEditingValue.text.toLowerCase();
+                        _autocompleteOpts = _allPeersLoader.peers
+                            .where(
+                              (peer) =>
+                                  peer.id.toLowerCase().contains(textToFind) ||
+                                  peer.username.toLowerCase().contains(
+                                        textToFind,
+                                      ) ||
+                                  peer.hostname.toLowerCase().contains(
+                                        textToFind,
+                                      ) ||
+                                  peer.alias.toLowerCase().contains(textToFind),
+                            )
+                            .toList();
                       }
-                      String textToFind = textEditingValue.text.toLowerCase();
-                      _autocompleteOpts = _allPeersLoader.peers
-                          .where((peer) =>
-                              peer.id.toLowerCase().contains(textToFind) ||
-                              peer.username
-                                  .toLowerCase()
-                                  .contains(textToFind) ||
-                              peer.hostname
-                                  .toLowerCase()
-                                  .contains(textToFind) ||
-                              peer.alias.toLowerCase().contains(textToFind))
-                          .toList();
-                    }
-                    return _autocompleteOpts;
-                  },
-                  focusNode: _idFocusNode,
-                  textEditingController: _idEditingController,
-                  fieldViewBuilder: (
-                    BuildContext context,
-                    TextEditingController fieldTextEditingController,
-                    FocusNode fieldFocusNode,
-                    VoidCallback onFieldSubmitted,
-                  ) {
-                    updateTextAndPreserveSelection(
-                        fieldTextEditingController, _idController.text);
-                    return Obx(() => TextField(
+                      return _autocompleteOpts;
+                    },
+                    focusNode: _idFocusNode,
+                    textEditingController: _idEditingController,
+                    fieldViewBuilder: (
+                      BuildContext context,
+                      TextEditingController fieldTextEditingController,
+                      FocusNode fieldFocusNode,
+                      VoidCallback onFieldSubmitted,
+                    ) {
+                      updateTextAndPreserveSelection(
+                        fieldTextEditingController,
+                        _idController.text,
+                      );
+                      return Obx(
+                        () => TextField(
                           autocorrect: false,
                           enableSuggestions: false,
                           keyboardType: TextInputType.visiblePassword,
                           focusNode: fieldFocusNode,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'WorkSans',
                             fontSize: 22,
                             height: 1.4,
+                            color: colors.textPrimary,
                           ),
                           maxLines: 1,
-                          cursorColor:
-                              Theme.of(context).textTheme.titleLarge?.color,
+                          cursorColor: colors.primary,
                           decoration: InputDecoration(
-                              filled: false,
-                              counterText: '',
-                              hintText: _idInputFocused.value
-                                  ? null
-                                  : translate('Enter Remote ID'),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 13)),
+                            filled: false,
+                            counterText: '',
+                            hintText: _idInputFocused.value
+                                ? null
+                                : translate('Enter Remote ID'),
+                            hintStyle: TextStyle(color: colors.textTertiary),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 13,
+                            ),
+                          ),
                           controller: fieldTextEditingController,
                           inputFormatters: [IDTextInputFormatter()],
                           onChanged: (v) {
@@ -440,109 +623,147 @@ class _ConnectionPageState extends State<ConnectionPage>
                           onSubmitted: (_) {
                             onConnect();
                           },
-                        ).workaroundFreezeLinuxMint());
-                  },
-                  onSelected: (option) {
-                    setState(() {
-                      _idController.id = option.id;
-                      FocusScope.of(context).unfocus();
-                    });
-                  },
-                  optionsViewBuilder: (BuildContext context,
+                        ).workaroundFreezeLinuxMint(),
+                      );
+                    },
+                    onSelected: (option) {
+                      setState(() {
+                        _idController.id = option.id;
+                        FocusScope.of(context).unfocus();
+                      });
+                    },
+                    optionsViewBuilder: (
+                      BuildContext context,
                       AutocompleteOnSelected<Peer> onSelected,
-                      Iterable<Peer> options) {
-                    options = _autocompleteOpts;
-                    double maxHeight = options.length * 50;
-                    if (options.length == 1) {
-                      maxHeight = 52;
-                    } else if (options.length == 3) {
-                      maxHeight = 146;
-                    } else if (options.length == 4) {
-                      maxHeight = 193;
-                    }
-                    maxHeight = maxHeight.clamp(0, 200);
+                      Iterable<Peer> options,
+                    ) {
+                      options = _autocompleteOpts;
+                      double maxHeight = options.length * 50;
+                      if (options.length == 1) {
+                        maxHeight = 52;
+                      } else if (options.length == 3) {
+                        maxHeight = 146;
+                      } else if (options.length == 4) {
+                        maxHeight = 193;
+                      }
+                      maxHeight = maxHeight.clamp(0, 200);
 
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: Container(
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Container(
                           decoration: BoxDecoration(
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 5,
+                                color: colors.textPrimary.withOpacity(0.15),
+                                blurRadius: 10,
                                 spreadRadius: 1,
                               ),
                             ],
                           ),
                           child: ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
-                              child: Material(
-                                elevation: 4,
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight: maxHeight,
-                                    maxWidth: 319,
-                                  ),
-                                  child: _allPeersLoader.peers.isEmpty &&
-                                          !_allPeersLoader.isPeersLoaded
-                                      ? Container(
-                                          height: 80,
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ))
-                                      : Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 5),
-                                          child: ListView(
-                                            children: options
-                                                .map((peer) =>
-                                                    AutocompletePeerTile(
-                                                        onSelect: () =>
-                                                            onSelected(peer),
-                                                        peer: peer))
-                                                .toList(),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Material(
+                              color: colors.surface,
+                              elevation: 4,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: maxHeight,
+                                  maxWidth: 319,
+                                ),
+                                child: _allPeersLoader.peers.isEmpty &&
+                                        !_allPeersLoader.isPeersLoaded
+                                    ? Container(
+                                        height: 80,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: colors.primary,
                                           ),
                                         ),
-                                ),
-                              ))),
-                    );
-                  },
-                )),
+                                      )
+                                    : Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 5,
+                                        ),
+                                        child: ListView(
+                                          children: options
+                                              .map(
+                                                (peer) => AutocompletePeerTile(
+                                                  onSelect: () =>
+                                                      onSelected(peer),
+                                                  peer: peer,
+                                                ),
+                                              )
+                                              .toList(),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
             Padding(
               padding: const EdgeInsets.only(top: 13.0),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        onConnect();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.cast_connected_rounded, size: 18),
+                          const SizedBox(width: 6),
+                          Text(translate("Connect"),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  height: 28.0,
-                  width: 28.0,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        var offset = Offset(0, 0);
-                        return Obx(() => InkWell(
+                  const SizedBox(width: 8),
+                  Container(
+                    height: 36,
+                    width: 36,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: colors.border),
+                      borderRadius: BorderRadius.circular(10),
+                      color: colors.surfaceVariant,
+                    ),
+                    child: Center(
+                      child: StatefulBuilder(
+                        builder: (context, setState) {
+                          var offset = Offset(0, 0);
+                          return Obx(
+                            () => InkWell(
+                              borderRadius: BorderRadius.circular(10),
                               child: _menuOpen.value
                                   ? Transform.rotate(
                                       angle: pi,
-                                      child: Icon(IconFont.more, size: 14),
+                                      child: Icon(Icons.more_horiz_rounded,
+                                          size: 18,
+                                          color: colors.textSecondary),
                                     )
-                                  : Icon(IconFont.more, size: 14),
+                                  : Icon(Icons.more_horiz_rounded,
+                                      size: 18, color: colors.textSecondary),
                               onTapDown: (e) {
                                 offset = e.globalPosition;
                               },
@@ -553,43 +774,59 @@ class _ConnectionPageState extends State<ConnectionPage>
                                 await mod_menu
                                     .showMenu(
                                   context: context,
-                                  position: RelativeRect.fromLTRB(x, y, x, y),
+                                  position: RelativeRect.fromLTRB(
+                                    x,
+                                    y,
+                                    x,
+                                    y,
+                                  ),
                                   items: [
                                     (
                                       'Transfer file',
-                                      () => onConnect(isFileTransfer: true)
+                                      () => onConnect(
+                                            isFileTransfer: true,
+                                          ),
                                     ),
                                     (
                                       'View camera',
-                                      () => onConnect(isViewCamera: true)
+                                      () => onConnect(
+                                            isViewCamera: true,
+                                          ),
                                     ),
                                     (
                                       '${translate('Terminal')} (beta)',
-                                      () => onConnect(isTerminal: true)
+                                      () => onConnect(
+                                            isTerminal: true,
+                                          ),
                                     ),
                                   ]
-                                      .map((e) => MenuEntryButton<String>(
-                                            childBuilder: (TextStyle? style) =>
-                                                Text(
-                                              translate(e.$1),
-                                              style: style,
-                                            ),
-                                            proc: () => e.$2(),
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal:
-                                                    kDesktopMenuPadding.left),
-                                            dismissOnClicked: true,
-                                          ))
-                                      .map((e) => e.build(
+                                      .map(
+                                        (e) => MenuEntryButton<String>(
+                                          childBuilder: (TextStyle? style) =>
+                                              Text(
+                                            translate(e.$1),
+                                            style: style,
+                                          ),
+                                          proc: () => e.$2(),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal:
+                                                kDesktopMenuPadding.left,
+                                          ),
+                                          dismissOnClicked: true,
+                                        ),
+                                      )
+                                      .map(
+                                        (e) => e.build(
                                           context,
                                           const MenuConfig(
-                                              commonColor: CustomPopupMenuTheme
-                                                  .commonColor,
-                                              height:
-                                                  CustomPopupMenuTheme.height,
-                                              dividerHeight:
-                                                  CustomPopupMenuTheme
-                                                      .dividerHeight)))
+                                            commonColor: CustomPopupMenuTheme
+                                                .commonColor,
+                                            height: CustomPopupMenuTheme.height,
+                                            dividerHeight: CustomPopupMenuTheme
+                                                .dividerHeight,
+                                          ),
+                                        ),
+                                      )
                                       .expand((i) => i)
                                       .toList(),
                                   elevation: 8,
@@ -598,18 +835,22 @@ class _ConnectionPageState extends State<ConnectionPage>
                                   _menuOpen.value = false;
                                 });
                               },
-                            ));
-                      },
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
     return Container(
-        constraints: const BoxConstraints(maxWidth: 600), child: w);
+      constraints: const BoxConstraints(maxWidth: 600),
+      child: w,
+    );
   }
 }

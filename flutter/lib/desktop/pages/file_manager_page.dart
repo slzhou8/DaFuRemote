@@ -15,6 +15,7 @@ import 'package:flutter_hbb/desktop/widgets/list_search_action_listener.dart';
 import 'package:flutter_hbb/desktop/widgets/menu_button.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/file_model.dart';
+import 'package:flutter_hbb/themes/modern_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:flutter_hbb/web/dummy.dart'

@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=RustDesk
+Name=DaFu Remote
 GenericName=Remote Desktop
-Comment=Remote Desktop
+Comment=DaFu Remote Desktop
 Exec=rustdesk %u
 Icon=rustdesk
 Terminal=false

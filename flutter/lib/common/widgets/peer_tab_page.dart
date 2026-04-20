@@ -17,6 +17,7 @@ import 'package:flutter_hbb/models/peer_model.dart';
 
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -136,6 +137,9 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget _createSwitchBar(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     var counter = -1;
     return ReorderableListView(
         buildDefaultDragHandles: false,
@@ -144,18 +148,8 @@ class _PeerTabPageState extends State<PeerTabPage>
         physics: NeverScrollableScrollPhysics(),
         children: model.visibleEnabledOrderedIndexs.map((t) {
           final selected = model.currentTab == t;
-          final color = selected
-              ? MyTheme.tabbar(context).selectedTextColor
-              : MyTheme.tabbar(context).unSelectedTextColor
-            ?..withOpacity(0.5);
+          final iconColor = selected ? colors.primary : colors.textSecondary;
           final hover = false.obs;
-          final deco = BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
-              borderRadius: BorderRadius.circular(6));
-          final decoBorder = BoxDecoration(
-              border: Border(
-            bottom: BorderSide(width: 2, color: color!),
-          ));
           counter += 1;
           return ReorderableDragStartListener(
               key: ValueKey(t),
@@ -165,13 +159,21 @@ class _PeerTabPageState extends State<PeerTabPage>
                     message: model.tabTooltip(t),
                     onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        decoration: (hover.value
-                            ? (selected ? decoBorder : deco)
-                            : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
-                      ).paddingSymmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? colors.primary.withOpacity(0.1)
+                              : (hover.value
+                                  ? colors.surfaceVariant
+                                  : Colors.transparent),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child:
+                            Icon(model.tabIcon(t), color: iconColor, size: 20),
+                      ),
                       onTap: isOptionFixed(kOptionPeerTabIndex)
                           ? null
                           : () async {
@@ -211,25 +213,28 @@ class _PeerTabPageState extends State<PeerTabPage>
   Widget _createRefresh(
       {required PeerTabIndex index, required RxBool loading}) {
     final model = Provider.of<PeerTabModel>(context);
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Offstage(
       offstage: model.currentTab != index.index,
       child: Tooltip(
         message: translate('Refresh'),
         child: RefreshWidget(
-            onPressed: () {
-              if (gFFI.peerTabModel.currentTab < entries.length) {
-                entries[gFFI.peerTabModel.currentTab].load?.call();
-              }
-            },
-            spinning: loading,
-            child: RotatedBox(
-                quarterTurns: 2,
-                child: Icon(
-                  Icons.refresh,
-                  size: 18,
-                  color: textColor,
-                ))),
+          onPressed: () {
+            if (gFFI.peerTabModel.currentTab < entries.length) {
+              entries[gFFI.peerTabModel.currentTab].load?.call();
+            }
+          },
+          spinning: loading,
+          child: RotatedBox(
+              quarterTurns: 2,
+              child: Icon(
+                Icons.refresh_rounded,
+                size: 18,
+                color: colors.textSecondary,
+              )),
+        ),
       ),
     );
   }
@@ -239,7 +244,9 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Widget _createMultiSelection() {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final model = Provider.of<PeerTabModel>(context);
     return _hoverAction(
       toolTip: translate('Select'),
@@ -250,11 +257,10 @@ class _PeerTabPageState extends State<PeerTabPage>
           Navigator.pop(context);
         }
       },
-      child: SvgPicture.asset(
-        "assets/checkbox-outline.svg",
-        width: 18,
-        height: 18,
-        colorFilter: svgColor(textColor),
+      child: Icon(
+        Icons.checklist_rounded,
+        size: 18,
+        color: colors.textSecondary,
       ),
     );
   }
@@ -327,6 +333,8 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget visibleContextMenu(CancelFunc cancelFunc) {
     final model = Provider.of<PeerTabModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
     final menu = List<MenuEntrySwitchSync>.empty(growable: true);
     for (int i = 0; i < model.orders.length; i++) {
       int tabIndex = model.orders[i];
@@ -347,8 +355,8 @@ class _PeerTabPageState extends State<PeerTabPage>
         items: menu
             .map((entry) => entry.build(
                 context,
-                const MenuConfig(
-                  commonColor: MyTheme.accent,
+                MenuConfig(
+                  commonColor: colors.primary,
                   height: 20.0,
                   dividerHeight: 12.0,
                 )))
@@ -384,6 +392,9 @@ class _PeerTabPageState extends State<PeerTabPage>
 
   Widget deleteSelection() {
     final model = Provider.of<PeerTabModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     if (model.currentTab == PeerTabIndex.group.index) {
       return Offstage();
     }
@@ -426,7 +437,7 @@ class _PeerTabPageState extends State<PeerTabPage>
 
           deleteConfirmDialog(onSubmit, translate('Delete'));
         },
-        child: Icon(Icons.delete, color: Colors.red));
+        child: Icon(Icons.delete_rounded, color: colors.error));
   }
 
   Widget addSelectionToFav() {
@@ -499,13 +510,30 @@ class _PeerTabPageState extends State<PeerTabPage>
   }
 
   Widget selectionCount(int count) {
-    return Align(
-      alignment: Alignment.center,
-      child: Text('$count ${translate('Selected')}'),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$count ${translate('Selected')}',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: colors.primary,
+        ),
+      ),
     );
   }
 
   Widget selectAll(PeerTabModel model) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Offstage(
       offstage:
           model.selectedPeers.length >= model.currentTabCachedPeers.length,
@@ -515,31 +543,45 @@ class _PeerTabPageState extends State<PeerTabPage>
         onTap: () {
           model.selectAll();
         },
-        child: Icon(Icons.select_all),
+        child: Icon(
+          Icons.select_all_rounded,
+          color: colors.textSecondary,
+          size: 20,
+        ),
       ).marginOnly(left: 6),
     );
   }
 
   Widget closeSelection() {
     final model = Provider.of<PeerTabModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return _hoverAction(
-            context: context,
-            toolTip: translate('Close'),
-            onTap: () {
-              model.setMultiSelectionMode(false);
-            },
-            child: Icon(Icons.clear))
-        .marginOnly(left: 6);
+        context: context,
+        toolTip: translate('Close'),
+        onTap: () {
+          model.setMultiSelectionMode(false);
+        },
+        child: Icon(
+          Icons.close_rounded,
+          color: colors.textSecondary,
+          size: 20,
+        )).marginOnly(left: 6);
   }
 
   Widget _toggleTags() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return _hoverAction(
         context: context,
         toolTip: translate('Toggle Tags'),
         hoverableWhenfalse: hideAbTagsPanel,
         child: Icon(
-          Icons.tag_rounded,
+          Icons.sell_rounded,
           size: 18,
+          color: colors.textSecondary,
         ),
         onTap: () async {
           await bind.mainSetLocalOption(
@@ -668,8 +710,11 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return drawer
-        ? _buildSearchBar()
+        ? _buildSearchBar(context, colors)
         : _hoverAction(
             context: context,
             toolTip: translate('Search'),
@@ -681,11 +726,12 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
             },
             child: Icon(
               Icons.search_rounded,
-              color: Theme.of(context).hintColor,
+              color: colors.textSecondary,
+              size: 20,
             ));
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context, ModernColors colors) {
     RxBool focused = false.obs;
     FocusNode focusNode = FocusNode();
     focusNode.addListener(() {
@@ -695,10 +741,10 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
           extentOffset: peerSearchTextController.value.text.length);
     });
     return Obx(() => Container(
-          width: stateGlobal.isPortrait.isTrue ? 120 : 140,
+          width: stateGlobal.isPortrait.isTrue ? 140 : 180,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.background,
-            borderRadius: BorderRadius.circular(6),
+            color: colors.surfaceVariant,
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
@@ -707,8 +753,9 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
                   children: [
                     Icon(
                       Icons.search_rounded,
-                      color: Theme.of(context).hintColor,
-                    ).marginSymmetric(horizontal: 4),
+                      color: colors.textTertiary,
+                      size: 18,
+                    ).marginSymmetric(horizontal: 8),
                     Expanded(
                       child: TextField(
                         autofocus: true,
@@ -719,30 +766,30 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
                         focusNode: focusNode,
                         textAlign: TextAlign.start,
                         maxLines: 1,
-                        cursorColor: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.color
-                            ?.withOpacity(0.5),
-                        cursorHeight: 18,
-                        cursorWidth: 1,
-                        style: const TextStyle(fontSize: 14),
+                        cursorColor: colors.primary,
+                        cursorHeight: 16,
+                        cursorWidth: 1.5,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colors.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           contentPadding:
-                              const EdgeInsets.symmetric(vertical: 6),
+                              const EdgeInsets.symmetric(vertical: 8),
                           hintText:
                               focused.value ? null : translate("Search ID"),
                           hintStyle: TextStyle(
-                              fontSize: 14, color: Theme.of(context).hintColor),
+                              fontSize: 13,
+                              color: colors.textTertiary,
+                              fontWeight: FontWeight.w400),
                           border: InputBorder.none,
                           isDense: true,
                         ),
                       ).workaroundFreezeLinuxMint(),
                     ),
-                    // Icon(Icons.close),
                     IconButton(
                       alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 2),
+                      padding: const EdgeInsets.only(right: 4),
                       onPressed: () {
                         setState(() {
                           peerSearchTextController.clear();
@@ -753,8 +800,9 @@ class _PeerSearchBarState extends State<PeerSearchBar> {
                       icon: Tooltip(
                           message: translate('Close'),
                           child: Icon(
-                            Icons.close,
-                            color: Theme.of(context).hintColor,
+                            Icons.close_rounded,
+                            color: colors.textTertiary,
+                            size: 18,
                           )),
                     ),
                   ],
@@ -776,15 +824,18 @@ class PeerViewDropdown extends StatefulWidget {
 class _PeerViewDropdownState extends State<PeerViewDropdown> {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final List<PeerUiType> types = [
       PeerUiType.grid,
       PeerUiType.tile,
       PeerUiType.list
     ];
     final style = TextStyle(
-        color: Theme.of(context).textTheme.titleLarge?.color,
+        color: colors.textPrimary,
         fontSize: MenuConfig.fontSize,
-        fontWeight: FontWeight.normal);
+        fontWeight: FontWeight.w600);
     List<PopupMenuEntry> items = List.empty(growable: true);
     items.add(PopupMenuItem(
         height: 36,
@@ -810,6 +861,7 @@ class _PeerViewDropdownState extends State<PeerViewDropdown> {
                                     ? Icons.view_list_rounded
                                     : Icons.view_agenda_rounded,
                             size: 18,
+                            color: colors.textSecondary,
                           )),
                       e,
                       peerCardUiType.value,
@@ -844,6 +896,7 @@ class _PeerViewDropdownState extends State<PeerViewDropdown> {
                   ? Icons.view_list_rounded
                   : Icons.view_agenda_rounded,
           size: 18,
+          color: colors.textSecondary,
         ),
         onTapDown: (details) {
           final x = details.globalPosition.dx;
@@ -883,10 +936,13 @@ class _PeerSortDropdownState extends State<PeerSortDropdown> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final style = TextStyle(
-        color: Theme.of(context).textTheme.titleLarge?.color,
+        color: colors.textPrimary,
         fontSize: MenuConfig.fontSize,
-        fontWeight: FontWeight.normal);
+        fontWeight: FontWeight.w600);
     List<PopupMenuEntry> items = List.empty(growable: true);
     items.add(PopupMenuItem(
         height: 36,
@@ -920,6 +976,7 @@ class _PeerSortDropdownState extends State<PeerSortDropdown> {
       child: Icon(
         Icons.sort_rounded,
         size: 18,
+        color: colors.textSecondary,
       ),
       onTapDown: (details) {
         final x = details.globalPosition.dx;
@@ -965,9 +1022,12 @@ class RefreshWidgetState extends State<RefreshWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     final deco = BoxDecoration(
-      color: Theme.of(context).colorScheme.background,
-      borderRadius: BorderRadius.circular(6),
+      color: colors.surfaceVariant,
+      borderRadius: BorderRadius.circular(8),
     );
     return AnimatedRotation(
         turns: turns,
@@ -978,10 +1038,11 @@ class RefreshWidgetState extends State<RefreshWidget> {
           }
         },
         child: Container(
-          padding: EdgeInsets.all(4.0),
-          margin: EdgeInsets.symmetric(horizontal: 1),
+          padding: const EdgeInsets.all(6.0),
+          margin: const EdgeInsets.symmetric(horizontal: 1),
           decoration: hover ? deco : null,
           child: InkWell(
+              borderRadius: BorderRadius.circular(8),
               onTap: () {
                 if (mounted) setState(() => turns += 1.0);
                 widget.onPressed();
@@ -1005,20 +1066,24 @@ Widget _hoverAction(
     required String toolTip,
     GestureTapDownCallback? onTapDown,
     RxBool? hoverableWhenfalse,
-    EdgeInsetsGeometry padding = const EdgeInsets.all(4.0)}) {
+    EdgeInsetsGeometry padding = const EdgeInsets.all(6.0)}) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final colors = isDark ? ModernColors.dark : ModernColors.light;
+
   final hover = false.obs;
   final deco = BoxDecoration(
-    color: Theme.of(context).colorScheme.background,
-    borderRadius: BorderRadius.circular(6),
+    color: colors.surfaceVariant,
+    borderRadius: BorderRadius.circular(8),
   );
   return Tooltip(
     message: toolTip,
     child: Obx(
       () => Container(
-          margin: EdgeInsets.symmetric(horizontal: 1),
+          margin: const EdgeInsets.symmetric(horizontal: 1),
           decoration:
               (hover.value || hoverableWhenfalse?.value == false) ? deco : null,
           child: InkWell(
+              borderRadius: BorderRadius.circular(8),
               onHover: (value) => hover.value = value,
               onTap: onTap,
               onTapDown: onTapDown,

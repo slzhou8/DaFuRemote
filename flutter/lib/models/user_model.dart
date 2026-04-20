@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/hbbs/hbbs.dart';
+import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
+import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:get/get.dart';
 
 import '../common.dart';
@@ -59,19 +61,21 @@ class UserModel {
     final url = await bind.mainGetApiServer();
     final body = {
       'id': await bind.mainGetMyId(),
-      'uuid': await bind.mainGetUuid()
+      'uuid': await bind.mainGetUuid(),
     };
     if (refreshingUser) return;
     try {
       refreshingUser = true;
       final http.Response response;
       try {
-        response = await http.post(Uri.parse('$url/api/currentUser'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token'
-            },
-            body: json.encode(body));
+        response = await http.post(
+          Uri.parse('$url/api/currentUser'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: json.encode(body),
+        );
       } catch (e) {
         networkError.value = e.toString();
         rethrow;
@@ -133,6 +137,7 @@ class UserModel {
   }
 
   _parseAndUpdateUser(UserPayload user) {
+    final wasLoggedOut = userName.value.trim().isEmpty;
     userName.value = user.name;
     displayName.value = user.displayName;
     avatar.value = user.avatar;
@@ -142,13 +147,20 @@ class UserModel {
       // ugly here, tmp solution
       bind.mainSetLocalOption(key: 'verifier', value: user.verifier ?? '');
     }
+    if (wasLoggedOut) {
+      gFFI.peerTabModel.setCurrentTab(PeerTabIndex.group.index);
+      bind.setLocalFlutterOption(
+        k: kOptionPeerTabIndex,
+        v: PeerTabIndex.group.index.toString(),
+      );
+    }
   }
 
   // update ab and group status
   static Future<void> updateOtherModels() async {
     await Future.wait([
       gFFI.abModel.pullAb(force: ForcePullAb.listAndCurrent, quiet: false),
-      gFFI.groupModel.pull()
+      gFFI.groupModel.pull(),
     ]);
   }
 
@@ -159,12 +171,14 @@ class UserModel {
       final authHeaders = getHttpHeaders();
       authHeaders['Content-Type'] = "application/json";
       await http
-          .post(Uri.parse('$url/api/logout'),
-              body: jsonEncode({
-                'id': await bind.mainGetMyId(),
-                'uuid': await bind.mainGetUuid(),
-              }),
-              headers: authHeaders)
+          .post(
+            Uri.parse('$url/api/logout'),
+            body: jsonEncode({
+              'id': await bind.mainGetMyId(),
+              'uuid': await bind.mainGetUuid(),
+            }),
+            headers: authHeaders,
+          )
           .timeout(Duration(seconds: 2));
     } catch (e) {
       debugPrint("request /api/logout failed: err=$e");
@@ -177,8 +191,10 @@ class UserModel {
   /// throw [RequestException]
   Future<LoginResponse> login(LoginRequest loginRequest) async {
     final url = await bind.mainGetApiServer();
-    final resp = await http.post(Uri.parse('$url/api/login'),
-        body: jsonEncode(loginRequest.toJson()));
+    final resp = await http.post(
+      Uri.parse('$url/api/login'),
+      body: jsonEncode(loginRequest.toJson()),
+    );
 
     final Map<String, dynamic> body;
     try {
@@ -187,7 +203,40 @@ class UserModel {
       debugPrint("login: jsonDecode resp body failed: ${e.toString()}");
       if (resp.statusCode != 200) {
         BotToast.showText(
-            contentColor: Colors.red, text: 'HTTP ${resp.statusCode}');
+          contentColor: Colors.red,
+          text: 'HTTP ${resp.statusCode}',
+        );
+      }
+      rethrow;
+    }
+    if (resp.statusCode != 200) {
+      throw RequestException(resp.statusCode, body['error'] ?? '');
+    }
+    if (body['error'] != null) {
+      throw RequestException(0, body['error']);
+    }
+
+    return getLoginResponseFromAuthBody(body);
+  }
+
+  /// throw [RequestException]
+  Future<LoginResponse> register(RegisterRequest registerRequest) async {
+    final url = await bind.mainGetApiServer();
+    final resp = await http.post(
+      Uri.parse('$url/api/register'),
+      body: jsonEncode(registerRequest.toJson()),
+    );
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(decode_http_response(resp));
+    } catch (e) {
+      debugPrint("register: jsonDecode resp body failed: ${e.toString()}");
+      if (resp.statusCode != 200) {
+        BotToast.showText(
+          contentColor: Colors.red,
+          text: 'HTTP ${resp.statusCode}',
+        );
       }
       rethrow;
     }
@@ -239,7 +288,8 @@ class UserModel {
           .toList();
     } catch (e) {
       debugPrint(
-          "queryOidcLoginOptions: jsonDecode resp body failed: ${e.toString()}");
+        "queryOidcLoginOptions: jsonDecode resp body failed: ${e.toString()}",
+      );
       return [];
     }
   }

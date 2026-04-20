@@ -80,6 +80,26 @@ class _PeerCardState extends State<_PeerCard>
         child: child);
   }
 
+  Widget _buildCurrentDeviceBadge() {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: primary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: primary.withOpacity(0.35)),
+      ),
+      child: Text(
+        '本机',
+        style: TextStyle(
+          fontSize: 10,
+          color: primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildPortrait() {
     final peer = super.widget.peer;
     return Card(
@@ -190,6 +210,8 @@ class _PeerCardState extends State<_PeerCard>
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall,
                         )),
+                        if (peer.isCurrentDevice)
+                          _buildCurrentDeviceBadge().marginOnly(left: 6),
                       ]).marginOnly(top: isPortrait ? 0 : 2),
                       Row(
                         children: [
@@ -372,6 +394,8 @@ class _PeerCardState extends State<_PeerCard>
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall,
                         )),
+                        if (peer.isCurrentDevice)
+                          _buildCurrentDeviceBadge().marginOnly(left: 6),
                       ]).paddingSymmetric(vertical: 8)),
                       checkBoxOrActionMoreLandscape(peer, isTile: false),
                     ],
@@ -422,13 +446,14 @@ class _PeerCardState extends State<_PeerCard>
   Widget checkBoxOrActionMorePortrait(Peer peer) {
     final PeerTabModel peerTabModel = Provider.of(context);
     final selected = peerTabModel.isPeerSelected(peer.id);
+    final selectedColor = Theme.of(context).colorScheme.primary;
     if (peerTabModel.multiSelectionMode) {
       return Padding(
         padding: const EdgeInsets.all(12),
         child: selected
             ? Icon(
                 Icons.check_box,
-                color: MyTheme.accent,
+                color: selectedColor,
               )
             : Icon(Icons.check_box_outline_blank),
       );
@@ -450,19 +475,20 @@ class _PeerCardState extends State<_PeerCard>
   Widget checkBoxOrActionMoreLandscape(Peer peer, {required bool isTile}) {
     final PeerTabModel peerTabModel = Provider.of(context);
     final selected = peerTabModel.isPeerSelected(peer.id);
+    final selectedColor = Theme.of(context).colorScheme.primary;
     if (peerTabModel.multiSelectionMode) {
       final icon = selected
           ? Icon(
               Icons.check_box,
-              color: MyTheme.accent,
+              color: selectedColor,
             )
           : Icon(Icons.check_box_outline_blank);
       bool last = peerTabModel.isShiftDown && peer.id == peerTabModel.lastId;
       double right = isTile ? 4 : 0;
       if (last) {
         return Container(
-          decoration: BoxDecoration(
-              border: Border.all(color: MyTheme.accent, width: 1)),
+          decoration:
+              BoxDecoration(border: Border.all(color: selectedColor, width: 1)),
           child: icon,
         ).marginOnly(right: right);
       } else {

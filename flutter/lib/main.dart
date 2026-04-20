@@ -18,6 +18,7 @@ import 'package:flutter_hbb/desktop/screen/desktop_terminal_screen.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -236,7 +237,7 @@ void runMultiWindow(
   _runApp(
     title,
     widget,
-    MyTheme.currentThemeMode(),
+    ThemeManager.currentThemeMode(),
   );
   // we do not hide titlebar on win7 because of the frame overflow.
   if (kUseCompatibleUiMode) {
@@ -291,7 +292,7 @@ void runConnectionManagerScreen() async {
   _runApp(
     '',
     const DesktopServerPage(),
-    MyTheme.currentThemeMode(),
+    ThemeManager.currentThemeMode(),
   );
   final hide = await bind.cmGetConfig(name: "hide_cm") == 'true';
   gFFI.serverModel.hideCm = hide;
@@ -365,8 +366,8 @@ void _runApp(
       navigatorKey: globalKey,
       debugShowCheckedModeBanner: false,
       title: title,
-      theme: MyTheme.lightTheme,
-      darkTheme: MyTheme.darkTheme,
+      theme: ThemeManager.getLightThemeData(),
+      darkTheme: ThemeManager.getDarkThemeData(),
       themeMode: themeMode,
       home: home,
       localizationsDelegates: const [
@@ -391,7 +392,7 @@ void _runApp(
 void runInstallPage() async {
   await windowManager.ensureInitialized();
   await initEnv(kAppTypeMain);
-  _runApp('', const InstallPage(), MyTheme.currentThemeMode());
+  _runApp('', const InstallPage(), ThemeManager.currentThemeMode());
   WindowOptions windowOptions =
       getHiddenTitleBarWindowOptions(size: Size(800, 600), center: true);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -432,7 +433,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.window.onPlatformBrightnessChanged = () {
-      final userPreference = MyTheme.getThemeModePreference();
+      final userPreference = ThemeManager.getThemeModePreference();
       if (userPreference != ThemeMode.system) return;
       WidgetsBinding.instance.handlePlatformBrightnessChanged();
       final systemIsDark =
@@ -502,9 +503,9 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           title: isWeb
               ? '${bind.mainGetAppNameSync()} Web Client V2 (Preview)'
               : bind.mainGetAppNameSync(),
-          theme: MyTheme.lightTheme,
-          darkTheme: MyTheme.darkTheme,
-          themeMode: MyTheme.currentThemeMode(),
+          theme: ThemeManager.getLightThemeData(),
+          darkTheme: ThemeManager.getDarkThemeData(),
+          themeMode: ThemeManager.currentThemeMode(),
           home: isDesktop
               ? const DesktopTabPage()
               : isWeb
@@ -562,7 +563,8 @@ _registerEventHandler() {
     platformFFI.registerEventHandler('theme', 'theme', (evt) async {
       String? dark = evt['dark'];
       if (dark != null) {
-        await MyTheme.changeDarkMode(MyTheme.themeModeFromString(dark));
+        await ThemeManager.changeDarkMode(
+            ThemeManager.themeModeFromString(dark));
       }
     });
     platformFFI.registerEventHandler('language', 'language', (_) async {

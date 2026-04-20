@@ -19,6 +19,8 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/manager.dart';
 import 'package:flutter_hbb/plugin/widgets/desktop_settings.dart';
+import 'package:flutter_hbb/themes/modern_theme.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,9 +29,9 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
 
-const double _kTabWidth = 200;
-const double _kTabHeight = 42;
-const double _kCardFixedWidth = 540;
+const double _kTabWidth = 220;
+const double _kTabHeight = 48;
+const double _kCardFixedWidth = 580;
 const double _kCardLeftMargin = 15;
 const double _kContentHMargin = 15;
 const double _kContentHSubMargin = _kContentHMargin + 33;
@@ -276,23 +278,27 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: colors.background,
       body: _buildBlock(
         children: <Widget>[
           SizedBox(
             width: _kTabWidth,
             child: Column(
               children: [
-                _header(context),
-                Flexible(child: _listView(tabs: _settingTabs())),
+                _header(context, colors),
+                Flexible(
+                    child: _listView(tabs: _settingTabs(), colors: colors)),
               ],
             ),
           ),
-          const VerticalDivider(width: 1),
+          VerticalDivider(width: 1, color: colors.border),
           Expanded(
             child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: colors.surface,
               child: PageView(
                 controller: controller,
                 physics: NeverScrollableScrollPhysics(),
@@ -305,14 +311,14 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     );
   }
 
-  Widget _header(BuildContext context) {
+  Widget _header(BuildContext context, ModernColors colors) {
     final settingsText = Text(
       translate('Settings'),
       textAlign: TextAlign.left,
-      style: const TextStyle(
-        color: _accentColor,
+      style: TextStyle(
+        color: colors.primary,
         fontSize: _kTitleFontSize,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
       ),
     );
     return Row(
@@ -344,50 +350,68 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     );
   }
 
-  Widget _listView({required List<_TabInfo> tabs}) {
+  Widget _listView(
+      {required List<_TabInfo> tabs, required ModernColors colors}) {
     final scrollController = ScrollController();
     return ListView(
       controller: scrollController,
-      children: tabs.map((tab) => _listItem(tab: tab)).toList(),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: tabs.map((tab) => _listItem(tab: tab, colors: colors)).toList(),
     );
   }
 
-  Widget _listItem({required _TabInfo tab}) {
+  Widget _listItem({required _TabInfo tab, required ModernColors colors}) {
     return Obx(() {
       bool selected = tab.key == selectedTab.value;
-      return SizedBox(
-        width: _kTabWidth,
-        height: _kTabHeight,
-        child: InkWell(
-          onTap: () {
-            if (selectedTab.value != tab.key) {
-              int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
-              if (index == -1) {
-                return;
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: SizedBox(
+          width: _kTabWidth,
+          height: _kTabHeight,
+          child: InkWell(
+            onTap: () {
+              if (selectedTab.value != tab.key) {
+                int index = DesktopSettingPage.tabKeys.indexOf(tab.key);
+                if (index == -1) {
+                  return;
+                }
+                controller.jumpToPage(index);
               }
-              controller.jumpToPage(index);
-            }
-            selectedTab.value = tab.key;
-          },
-          child: Row(children: [
-            Container(
-              width: 4,
-              height: _kTabHeight * 0.7,
-              color: selected ? _accentColor : null,
+              selectedTab.value = tab.key;
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.primary.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 3,
+                  height: _kTabHeight * 0.5,
+                  decoration: BoxDecoration(
+                    color: selected ? colors.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Icon(
+                  selected ? tab.selected : tab.unselected,
+                  color: selected ? colors.primary : colors.textSecondary,
+                  size: 20,
+                ).marginOnly(left: 10, right: 10),
+                Text(
+                  translate(tab.label),
+                  style: TextStyle(
+                      color: selected ? colors.primary : colors.textSecondary,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: _kContentFontSize),
+                ),
+              ]),
             ),
-            Icon(
-              selected ? tab.selected : tab.unselected,
-              color: selected ? _accentColor : null,
-              size: 20,
-            ).marginOnly(left: 13, right: 10),
-            Text(
-              translate(tab.label),
-              style: TextStyle(
-                  color: selected ? _accentColor : null,
-                  fontWeight: FontWeight.w400,
-                  fontSize: _kContentFontSize),
-            ),
-          ]),
+          ),
         ),
       );
     });
@@ -2041,7 +2065,7 @@ class _AccountState extends State<_Account> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Builder(builder: (context) {
