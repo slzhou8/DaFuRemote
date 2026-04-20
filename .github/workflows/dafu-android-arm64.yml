@@ -110,6 +110,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Fetch hwcodec externals
+        shell: bash
+        run: |
+          externals_path="./vendor/hwcodec/externals"
+          if [[ -d "${externals_path}/MediaSDK_22.5.4" ]]; then
+            echo "hwcodec externals already present."
+            exit 0
+          fi
+          rm -rf "${externals_path}"
+          git clone --depth 1 https://github.com/rustdesk-org/externals.git "${externals_path}"
+
       - name: Read version
         id: version
         shell: bash
