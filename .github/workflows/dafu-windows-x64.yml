@@ -61,6 +61,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Fetch hwcodec externals
+        shell: pwsh
+        run: |
+          $externalsPath = ".\vendor\hwcodec\externals"
+          if (Test-Path (Join-Path $externalsPath "MediaSDK_22.5.4")) {
+            Write-Host "hwcodec externals already present."
+            exit 0
+          }
+          if (Test-Path $externalsPath) {
+            Remove-Item -LiteralPath $externalsPath -Recurse -Force
+          }
+          git clone --depth 1 https://github.com/rustdesk-org/externals.git $externalsPath
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
