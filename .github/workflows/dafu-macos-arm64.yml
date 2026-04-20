@@ -154,14 +154,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION="$(python3 - <<'PY'
-from pathlib import Path
-for line in Path("Cargo.toml").read_text(encoding="utf-8").splitlines():
-    if line.startswith("version"):
-        print(line.split("=")[1].strip().strip('"'))
-        break
-PY
-)"
+          VERSION="$(python3 -c "from pathlib import Path; print(next(line.split('=')[1].strip().strip('\"') for line in Path('Cargo.toml').read_text(encoding='utf-8').splitlines() if line.startswith('version')))" )"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Create unsigned DMG
