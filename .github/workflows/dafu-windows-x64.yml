@@ -79,6 +79,22 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Use crates.io sparse index in CI
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+
+          path = Path(".cargo/config.toml")
+          text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
+          text = text.replace(
+              '[source.crates-io]\nreplace-with = "rsproxy-sparse"\n\n[source.rsproxy-sparse]\nregistry = "sparse+https://rsproxy.cn/index/"\n',
+              '[source.crates-io]\nregistry = "sparse+https://index.crates.io/"\n',
+          )
+          path.write_text(text, encoding="utf-8", newline="\n")
+          print(path.read_text(encoding="utf-8"))
+          '@ | python -
+
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
