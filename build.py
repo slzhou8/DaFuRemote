@@ -416,7 +416,14 @@ def build_flutter_dmg(version, features):
         "cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib")
     os.chdir('flutter')
     system2('flutter build macos --release')
-    system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/')
+    macos_release_dir = Path('./build/macos/Build/Products/Release')
+    app_bundles = sorted(macos_release_dir.glob('*.app'))
+    if not app_bundles:
+        raise Exception(
+            f'No macOS app bundle found under {macos_release_dir.resolve()}')
+    app_bundle = app_bundles[0]
+    system2(
+        f'cp -rf ../target/release/service "{app_bundle}/Contents/MacOS/"')
     '''
     system2(
         "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon RustDesk.app 200 190 --hide-extension RustDesk.app rustdesk.dmg ./build/macos/Build/Products/Release/RustDesk.app")
