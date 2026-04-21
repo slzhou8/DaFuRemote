@@ -11,21 +11,6 @@ on:
         type: string
         required: false
         default: ""
-  workflow_dispatch:
-    inputs:
-      upload_release:
-        type: boolean
-        description: Upload the built DMG to a GitHub Release
-        required: false
-        default: false
-      tag_name:
-        description: Release tag used when upload_release=true
-        required: false
-        default: ""
-  push:
-    tags:
-      - "v*"
-      - "[0-9]*"
 
 env:
   MAC_RUST_VERSION: "1.81"
