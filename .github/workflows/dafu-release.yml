@@ -128,8 +128,12 @@ jobs:
         shell: bash
         run: |
           cd "$(dirname "$(dirname "$(which flutter)")")"
-          if [[ "${{ env.FLUTTER_VERSION }}" == "3.24.5" ]]; then
-            git apply "${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          PATCH_FILE="${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          if git apply --check "${PATCH_FILE}" >/dev/null 2>&1; then
+            git apply "${PATCH_FILE}"
+            echo "Applied Flutter dropdown menu patch."
+          else
+            echo "Flutter dropdown menu patch is not needed or not compatible with Flutter ${{ env.FLUTTER_VERSION }}, skipping."
           fi
 
       - name: Install Rust toolchain
@@ -294,8 +298,12 @@ jobs:
         shell: bash
         run: |
           cd "$(dirname "$(dirname "$(which flutter)")")"
-          if [[ "${{ env.FLUTTER_VERSION }}" == "3.24.5" ]]; then
-            git apply "${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          PATCH_FILE="${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          if git apply --check "${PATCH_FILE}" >/dev/null 2>&1; then
+            git apply "${PATCH_FILE}"
+            echo "Applied Flutter dropdown menu patch."
+          else
+            echo "Flutter dropdown menu patch is not needed or not compatible with Flutter ${{ env.FLUTTER_VERSION }}, skipping."
           fi
 
       - name: Work around Flutter scheduler issue
@@ -515,8 +523,12 @@ jobs:
         shell: bash
         run: |
           cd "$(dirname "$(dirname "$(which flutter)")")"
-          if [[ "${{ env.FLUTTER_VERSION }}" == "3.24.5" ]]; then
-            git apply "${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          PATCH_FILE="${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          if git apply --check "${PATCH_FILE}" >/dev/null 2>&1; then
+            git apply "${PATCH_FILE}"
+            echo "Applied Flutter dropdown menu patch."
+          else
+            echo "Flutter dropdown menu patch is not needed or not compatible with Flutter ${{ env.FLUTTER_VERSION }}, skipping."
           fi
 
       - name: Setup Android NDK
