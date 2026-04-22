@@ -5,6 +5,7 @@ import 'package:flutter_hbb/common/widgets/dialog.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
@@ -22,6 +23,11 @@ typedef PopupMenuEntryBuilder = Future<List<mod_menu.PopupMenuEntry<String>>>
 enum PeerUiType { grid, tile, list }
 
 final peerCardUiType = PeerUiType.grid.obs;
+
+const int kPeerListInfoFlex = 46;
+const int kPeerListNoteFlex = 20;
+const int kPeerListStatusFlex = 14;
+const double kPeerListActionsWidth = 188;
 
 bool? hideUsernameOnCard;
 
@@ -90,7 +96,7 @@ class _PeerCardState extends State<_PeerCard>
         border: Border.all(color: primary.withOpacity(0.35)),
       ),
       child: Text(
-        '本机',
+        'Current',
         style: TextStyle(
           fontSize: 10,
           color: primary,
@@ -113,6 +119,7 @@ class _PeerCardState extends State<_PeerCard>
 
   Widget _buildLandscape() {
     final peer = super.widget.peer;
+    final hover = false.obs;
     var deco = Rx<BoxDecoration?>(
       BoxDecoration(
         border: Border.all(color: Colors.transparent, width: _borderWidth),
@@ -123,6 +130,7 @@ class _PeerCardState extends State<_PeerCard>
     );
     return MouseRegion(
       onEnter: (evt) {
+        hover.value = true;
         deco.value = BoxDecoration(
           border: Border.all(
               color: Theme.of(context).colorScheme.primary,
@@ -133,6 +141,7 @@ class _PeerCardState extends State<_PeerCard>
         );
       },
       onExit: (evt) {
+        hover.value = false;
         deco.value = BoxDecoration(
           border: Border.all(color: Colors.transparent, width: _borderWidth),
           borderRadius: BorderRadius.circular(
@@ -143,7 +152,209 @@ class _PeerCardState extends State<_PeerCard>
       child: gestureDetector(
           child: Obx(() => peerCardUiType.value == PeerUiType.grid
               ? _buildPeerCard(context, peer, deco)
-              : _buildPeerTile(context, peer, deco))),
+              : peerCardUiType.value == PeerUiType.list
+                  ? _buildPeerListRow(context, peer, hover.value)
+                  : _buildPeerTile(context, peer, deco))),
+    );
+  }
+
+  Widget _buildModernCurrentDeviceBadge() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.primary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.primary.withOpacity(0.2)),
+      ),
+      child: Text(
+        'Current',
+        style: TextStyle(
+          fontSize: 10,
+          color: colors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeerListRow(BuildContext context, Peer peer, bool hovered) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+    final peerTabModel = Provider.of<PeerTabModel>(context);
+    final selected = peerTabModel.isPeerSelected(peer.id);
+    final name =
+        '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
+    final title =
+        peer.alias.isNotEmpty ? peer.alias : (name.isEmpty ? peer.id : name);
+    final secondary =
+        peer.alias.isNotEmpty && name.isNotEmpty && peer.alias != name
+            ? '${formatID(peer.id)} - $name'
+            : formatID(peer.id);
+    final note = peer.note.trim().isEmpty ? '--' : peer.note.trim();
+    final statusColor = peer.online ? colors.success : colors.warning;
+    final backgroundColor = selected
+        ? colors.primary.withOpacity(0.08)
+        : hovered
+            ? colors.surfaceVariant.withOpacity(0.55)
+            : colors.surface;
+
+    TextStyle primaryStyle = TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      color: colors.textPrimary,
+    );
+    TextStyle secondaryStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      color: colors.textSecondary,
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border(
+          bottom: BorderSide(color: colors.border),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: kPeerListInfoFlex,
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: str2color('${peer.id}${peer.platform}', 0x22),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: getPlatformImage(peer.platform, size: 24),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: primaryStyle,
+                            ),
+                          ),
+                          if (peer.isCurrentDevice)
+                            _buildModernCurrentDeviceBadge()
+                                .marginOnly(left: 8),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        secondary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: secondaryStyle,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: kPeerListNoteFlex,
+            child: Text(
+              note,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: secondaryStyle.copyWith(
+                color: note == '--' ? colors.textTertiary : colors.textPrimary,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: kPeerListStatusFlex,
+            child: Row(
+              children: [
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  peer.online ? 'Online' : 'Offline',
+                  style: secondaryStyle.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: peer.online ? colors.success : colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: kPeerListActionsWidth,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SizedBox(
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    onPressed: peer.isCurrentDevice
+                        ? null
+                        : () => widget.connect(context, peer.id),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: peer.isCurrentDevice
+                            ? colors.border
+                            : colors.primary.withOpacity(0.55),
+                      ),
+                      foregroundColor: peer.isCurrentDevice
+                          ? colors.textTertiary
+                          : colors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.desktop_windows_outlined,
+                      size: 16,
+                      color: peer.isCurrentDevice
+                          ? colors.textTertiary
+                          : colors.primary,
+                    ),
+                    label: Text(
+                      peer.isCurrentDevice
+                          ? 'Current Device'
+                          : 'Remote Control',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: _actionMore(peer),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

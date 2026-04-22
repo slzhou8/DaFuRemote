@@ -8,6 +8,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -251,7 +252,7 @@ class _PeersViewState extends State<_PeersView>
               // and the peers change event will trigger _buildPeersView().
               return !isPortrait
                   ? Obx(() => peerCardUiType.value == PeerUiType.list
-                      ? Container(height: 45, child: visibilityChild)
+                      ? visibilityChild
                       : peerCardUiType.value == PeerUiType.grid
                           ? SizedBox(
                               width: 220, height: 140, child: visibilityChild)
@@ -263,33 +264,41 @@ class _PeersViewState extends State<_PeersView>
             // We should avoid too many rebuilds. Win10(Some machines) on Flutter 3.19.6.
             // Continious rebuilds of `ListView.builder` will cause memory leak.
             // Simple demo can reproduce this issue.
-            final Widget child = Obx(() => stateGlobal.isPortrait.isTrue
-                ? ListView.builder(
-                    itemCount: peers.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return buildOnePeer(peers[index], true).marginOnly(
-                          top: index == 0 ? 0 : space / 2, bottom: space / 2);
-                    },
-                  )
-                : peerCardUiType.value == PeerUiType.list
-                    ? ListView.builder(
+            final Widget child = Obx(() {
+              if (stateGlobal.isPortrait.isTrue) {
+                return ListView.builder(
+                  itemCount: peers.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return buildOnePeer(peers[index], true).marginOnly(
+                        top: index == 0 ? 0 : space / 2, bottom: space / 2);
+                  },
+                );
+              }
+              if (peerCardUiType.value == PeerUiType.list) {
+                return Column(
+                  children: [
+                    _buildListHeader(context),
+                    Expanded(
+                      child: ListView.builder(
                         controller: _scrollController,
                         itemCount: peers.length,
                         itemBuilder: (BuildContext context, int index) {
-                          return buildOnePeer(peers[index], false).marginOnly(
-                              right: space,
-                              top: index == 0 ? 0 : space / 2,
-                              bottom: space / 2);
-                        },
-                      )
-                    : DynamicGridView.builder(
-                        gridDelegate: SliverGridDelegateWithWrapping(
-                            mainAxisSpacing: space / 2,
-                            crossAxisSpacing: space),
-                        itemCount: peers.length,
-                        itemBuilder: (BuildContext context, int index) {
                           return buildOnePeer(peers[index], false);
-                        }));
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return DynamicGridView.builder(
+                gridDelegate: SliverGridDelegateWithWrapping(
+                    mainAxisSpacing: space / 2, crossAxisSpacing: space),
+                itemCount: peers.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return buildOnePeer(peers[index], false);
+                },
+              );
+            });
 
             if (updateEvent == UpdateEvent.load) {
               _curPeers.clear();
@@ -308,6 +317,48 @@ class _PeersViewState extends State<_PeersView>
     }, obslist);
 
     return body;
+  }
+
+  Widget _buildListHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? ModernColors.dark : ModernColors.light;
+    final labelStyle = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      color: colors.textSecondary,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+      decoration: BoxDecoration(
+        color: colors.background,
+        border: Border(
+          bottom: BorderSide(color: colors.border),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: kPeerListInfoFlex,
+            child: Text('Device', style: labelStyle),
+          ),
+          Expanded(
+            flex: kPeerListNoteFlex,
+            child: Text('Note', style: labelStyle),
+          ),
+          Expanded(
+            flex: kPeerListStatusFlex,
+            child: Text('Status', style: labelStyle),
+          ),
+          SizedBox(
+            width: kPeerListActionsWidth,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text('Action', style: labelStyle),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   var _queryInterval = const Duration(seconds: 20);
