@@ -7,8 +7,9 @@
 // The application's name. By default this is also the title of the Flutter window.
 PRODUCT_NAME = DaFu Remote
 
-// The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.carriez.flutterHbb
+// The application's bundle identifier.
+// Keep this aligned with Cargo.toml package.metadata.bundle.identifier for signed builds.
+PRODUCT_BUNDLE_IDENTIFIER = cn.xiaole888.yc.dafuremote
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 Purslane Ltd. All rights reserved.
