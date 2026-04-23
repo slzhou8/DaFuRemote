@@ -10,7 +10,6 @@ import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'package:flutter_hbb/mobile/widgets/dialog.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -19,7 +18,6 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/plugin/manager.dart';
 import 'package:flutter_hbb/plugin/widgets/desktop_settings.dart';
-import 'package:flutter_hbb/themes/modern_theme.dart';
 import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -87,6 +85,29 @@ class DesktopSettingPage extends StatefulWidget {
 
   DesktopSettingPage({Key? key, required this.initialTabkey}) : super(key: key);
 
+  static Future<void> showAsDialog({
+    SettingsTabKey initialPage = SettingsTabKey.general,
+  }) async {
+    await gFFI.dialogManager.show((setState, close, context) {
+      return CustomAlertDialog(
+        title: Text(translate('设置')),
+        contentBoxConstraints: const BoxConstraints(maxWidth: 1120),
+        content: SizedBox(
+          width: 1120,
+          height: 760,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: DesktopSettingPage(initialTabkey: initialPage),
+          ),
+        ),
+        actions: [
+          dialogButton('关闭', onPressed: close, isOutline: true),
+        ],
+        onCancel: close,
+      );
+    });
+  }
+
   @override
   State<DesktopSettingPage> createState() =>
       _DesktopSettingPageState(initialTabkey);
@@ -98,7 +119,6 @@ class DesktopSettingPage extends StatefulWidget {
         return;
       }
       if (Get.isRegistered<PageController>(tag: _kSettingPageControllerTag)) {
-        DesktopTabPage.onAddSetting(initialPage: page);
         PageController controller =
             Get.find<PageController>(tag: _kSettingPageControllerTag);
         Rx<SettingsTabKey> selected =
@@ -106,7 +126,7 @@ class DesktopSettingPage extends StatefulWidget {
         selected.value = page;
         controller.jumpToPage(index);
       } else {
-        DesktopTabPage.onAddSetting(initialPage: page);
+        DesktopSettingPage.showAsDialog(initialPage: page);
       }
     } catch (e) {
       debugPrintStack(label: '$e');
@@ -183,36 +203,34 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
     for (final tab in DesktopSettingPage.tabKeys) {
       switch (tab) {
         case SettingsTabKey.general:
-          settingTabs.add(_TabInfo(
-              tab, 'General', Icons.settings_outlined, Icons.settings));
+          settingTabs.add(
+              _TabInfo(tab, '通用', Icons.settings_outlined, Icons.settings));
           break;
         case SettingsTabKey.safety:
-          settingTabs.add(_TabInfo(tab, 'Security',
+          settingTabs.add(_TabInfo(tab, '安全',
               Icons.enhanced_encryption_outlined, Icons.enhanced_encryption));
           break;
         case SettingsTabKey.network:
-          settingTabs
-              .add(_TabInfo(tab, 'Network', Icons.link_outlined, Icons.link));
+          settingTabs.add(_TabInfo(tab, '网络', Icons.link_outlined, Icons.link));
           break;
         case SettingsTabKey.display:
-          settingTabs.add(_TabInfo(tab, 'Display',
-              Icons.desktop_windows_outlined, Icons.desktop_windows));
+          settingTabs.add(_TabInfo(tab, '显示', Icons.desktop_windows_outlined,
+              Icons.desktop_windows));
           break;
         case SettingsTabKey.plugin:
-          settingTabs.add(_TabInfo(
-              tab, 'Plugin', Icons.extension_outlined, Icons.extension));
+          settingTabs.add(
+              _TabInfo(tab, '插件', Icons.extension_outlined, Icons.extension));
           break;
         case SettingsTabKey.account:
-          settingTabs.add(
-              _TabInfo(tab, 'Account', Icons.person_outline, Icons.person));
+          settingTabs
+              .add(_TabInfo(tab, '账号', Icons.person_outline, Icons.person));
           break;
         case SettingsTabKey.printer:
           settingTabs
-              .add(_TabInfo(tab, 'Printer', Icons.print_outlined, Icons.print));
+              .add(_TabInfo(tab, '打印', Icons.print_outlined, Icons.print));
           break;
         case SettingsTabKey.about:
-          settingTabs
-              .add(_TabInfo(tab, 'About', Icons.info_outline, Icons.info));
+          settingTabs.add(_TabInfo(tab, '关于', Icons.info_outline, Icons.info));
           break;
       }
     }
@@ -313,7 +331,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
 
   Widget _header(BuildContext context, ModernColors colors) {
     final settingsText = Text(
-      translate('Settings'),
+      '设置',
       textAlign: TextAlign.left,
       style: TextStyle(
         color: colors.primary,
@@ -440,7 +458,7 @@ class _GeneralState extends State<_General> {
       children: [
         if (!isWeb) service(),
         theme(),
-        _Card(title: 'Language', children: [language()]),
+        _Card(title: '语言', children: [language()]),
         if (!isWeb) hwcodec(),
         if (!isWeb) audio(context),
         if (!isWeb) record(context),
@@ -458,7 +476,7 @@ class _GeneralState extends State<_General> {
     }
 
     final isOptFixed = isOptionFixed(kCommConfKeyTheme);
-    return _Card(title: 'Theme', children: [
+    return _Card(title: '主题', children: [
       _Radio<String>(context,
           value: 'light',
           groupValue: current,
@@ -490,7 +508,7 @@ class _GeneralState extends State<_General> {
         return const Offstage();
       }
 
-      return _Card(title: 'Service', children: [
+      return _Card(title: '服务', children: [
         _Button(serviceStop.value ? 'Start' : 'Stop', () {
           () async {
             serviceBtnEnabled.value = false;
@@ -619,7 +637,7 @@ class _GeneralState extends State<_General> {
         },
       ));
     }
-    return _Card(title: 'Other', children: children);
+    return _Card(title: '其他', children: children);
   }
 
   Widget wallpaper() {
@@ -666,7 +684,7 @@ class _GeneralState extends State<_General> {
     final vram = bind.mainHasVram();
     return Offstage(
       offstage: !(hwcodec || vram),
-      child: _Card(title: 'Hardware Codec', children: [
+      child: _Card(title: '硬件编解码', children: [
         _OptionCheckBox(
           context,
           'Enable hardware codec',
@@ -696,7 +714,7 @@ class _GeneralState extends State<_General> {
           setState(() {});
         },
       ).marginOnly(left: _kContentHMargin);
-      return _Card(title: 'Audio Input Device', children: [child]);
+      return _Card(title: '音频输入设备', children: [child]);
     }
 
     return AudioInput(builder: builder, isCm: false, isVoiceCall: false);
@@ -723,7 +741,7 @@ class _GeneralState extends State<_General> {
       String root_dir = map['root_dir']!;
       bool root_dir_exists = map['root_dir_exists']!;
       bool user_dir_exists = map['user_dir_exists']!;
-      return _Card(title: 'Recording', children: [
+      return _Card(title: '录制', children: [
         if (!bind.isOutgoingOnly())
           _OptionCheckBox(context, 'Automatically record incoming sessions',
               kOptionAllowAutoRecordIncoming),
@@ -858,7 +876,7 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
         controller: scrollController,
         child: Column(
           children: [
-            _lock(locked, 'Unlock Security Settings', () {
+            _lock(locked, '解锁安全设置', () {
               locked = false;
               setState(() => {});
             }),
@@ -867,9 +885,9 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
               child: Column(children: [
                 permissions(context),
                 password(context),
-                _Card(title: '2FA', children: [tfa()]),
+                _Card(title: '双重验证', children: [tfa()]),
                 if (!isChangeIdDisabled())
-                  _Card(title: 'ID', children: [changeId()]),
+                  _Card(title: '设备 ID', children: [changeId()]),
                 more(context),
               ]),
             ),
@@ -1035,7 +1053,7 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
           break;
       }
 
-      return _Card(title: 'Permissions', children: [
+      return _Card(title: '权限', children: [
         ComboBox(
             keys: [
               defaultOptionAccessMode,
@@ -1223,7 +1241,7 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
           final usePassword = model.approveMode != 'click';
 
           final isApproveModeFixed = isOptionFixed(kOptionApproveMode);
-          return _Card(title: 'Password', children: [
+          return _Card(title: '密码', children: [
             ComboBox(
               enabled: !locked && !isApproveModeFixed,
               keys: modeKeys,
@@ -1256,7 +1274,7 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
 
   Widget more(BuildContext context) {
     bool enabled = !locked;
-    return _Card(title: 'Security', children: [
+    return _Card(title: '安全', children: [
       shareRdp(context, enabled),
       _OptionCheckBox(context, 'Deny LAN discovery', 'enable-lan-discovery',
           reverse: true, enabled: enabled),
@@ -1572,7 +1590,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
   Widget build(BuildContext context) {
     super.build(context);
     return ListView(controller: scrollController, children: [
-      _lock(locked, 'Unlock Network Settings', () {
+      _lock(locked, '解锁网络设置', () {
         locked = false;
         setState(() => {});
       }),
@@ -1675,7 +1693,7 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
 
     final divider = const Divider(height: 1, indent: 16, endIndent: 16);
     return _Card(
-      title: 'Network',
+      title: '网络',
       children: [
         Container(
           child: Column(
@@ -1783,7 +1801,7 @@ class _DisplayState extends State<_Display> {
     }
 
     final groupValue = bind.mainGetUserDefaultOption(key: kOptionViewStyle);
-    return _Card(title: 'Default View Style', children: [
+    return _Card(title: '默认视图样式', children: [
       _Radio(context,
           value: kRemoteViewStyleOriginal,
           groupValue: groupValue,
@@ -1813,7 +1831,7 @@ class _DisplayState extends State<_Display> {
       setState(() {});
     }
 
-    return _Card(title: 'Default Scroll Style', children: [
+    return _Card(title: '默认滚动样式', children: [
       _Radio(context,
           value: kRemoteScrollStyleAuto,
           groupValue: groupValue,
@@ -1853,7 +1871,7 @@ class _DisplayState extends State<_Display> {
 
     final isOptFixed = isOptionFixed(kOptionImageQuality);
     final groupValue = bind.mainGetUserDefaultOption(key: kOptionImageQuality);
-    return _Card(title: 'Default Image Quality', children: [
+    return _Card(title: '默认画质', children: [
       _Radio(context,
           value: kRemoteImageQualityBest,
           groupValue: groupValue,
@@ -1893,7 +1911,7 @@ class _DisplayState extends State<_Display> {
       // But it may also be ok to take effect in the next connection.
     }
 
-    return _Card(title: 'Default trackpad speed', children: [
+    return _Card(title: '默认触控板速度', children: [
       TrackpadSpeedWidget(
         value: curSpeed,
         onDebouncer: onDebouncer,
@@ -1933,7 +1951,7 @@ class _DisplayState extends State<_Display> {
     } catch (e) {
       debugPrint("failed to parse supported hwdecodings, err=$e");
     }
-    return _Card(title: 'Default Codec', children: [
+    return _Card(title: '默认编解码器', children: [
       _Radio(context,
           value: 'auto',
           groupValue: groupValue,
@@ -1982,7 +2000,7 @@ class _DisplayState extends State<_Display> {
       groupValue = bind.mainDefaultPrivacyModeImpl();
     }
     return _Card(
-      title: 'Privacy mode',
+      title: '隐私模式',
       children: privacyModeImpls.map((impl) {
         final d = impl as List<dynamic>;
         return _Radio(context,
@@ -2024,7 +2042,7 @@ class _DisplayState extends State<_Display> {
   Widget other(BuildContext context) {
     final children =
         otherDefaultSettings().map((e) => otherRow(e.$1, e.$2)).toList();
-    return _Card(title: 'Other Default Options', children: children);
+    return _Card(title: '其他默认选项', children: children);
   }
 }
 
@@ -2042,7 +2060,7 @@ class _AccountState extends State<_Account> {
     return ListView(
       controller: scrollController,
       children: [
-        _Card(title: 'Account', children: [accountAction(), useInfo()]),
+        _Card(title: '账号', children: [accountAction(), useInfo()]),
       ],
     ).marginOnly(bottom: _kListViewBottomMargin);
   }
@@ -2050,7 +2068,7 @@ class _AccountState extends State<_Account> {
   Widget accountAction() {
     return Obx(() => _Button(
         gFFI.userModel.userName.value.isEmpty
-            ? 'Login'
+            ? '登录'
             : '${translate('Logout')} (${gFFI.userModel.accountLabelWithHandle})',
         () => {
               gFFI.userModel.userName.value.isEmpty
@@ -2218,7 +2236,7 @@ class _PluginState extends State<_Plugin> {
 }
 
 class _Printer extends StatefulWidget {
-  const _Printer({super.key});
+  const _Printer();
 
   @override
   State<_Printer> createState() => __PrinterState();
@@ -2314,7 +2332,7 @@ class __PrinterState extends State<_Printer> {
         if (installed && isPrinterInstalled) tipReady()
       ]);
     }
-    return _Card(title: 'Outgoing Print Jobs', children: children);
+    return _Card(title: '传出打印任务', children: children);
   }
 
   Widget incoming(BuildContext context) {
@@ -2325,7 +2343,7 @@ class __PrinterState extends State<_Printer> {
     }
 
     PrinterOptions printerOptions = PrinterOptions.load();
-    return _Card(title: 'Incoming Print Jobs', children: [
+    return _Card(title: '传入打印任务', children: [
       _Radio(context,
           value: kValuePrinterIncomingJobDismiss,
           groupValue: printerOptions.action,
@@ -2394,7 +2412,7 @@ class _AboutState extends State<_About> {
       final scrollController = ScrollController();
       return SingleChildScrollView(
         controller: scrollController,
-        child: _Card(title: translate('About RustDesk'), children: [
+        child: _Card(title: '关于 $appName', children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2860,51 +2878,6 @@ Widget _lock(
           ),
         ],
       ));
-}
-
-_LabeledTextField(
-    BuildContext context,
-    String label,
-    TextEditingController controller,
-    String errorText,
-    bool enabled,
-    bool secure) {
-  return Table(
-    columnWidths: const {
-      0: FixedColumnWidth(150),
-      1: FlexColumnWidth(),
-    },
-    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-    children: [
-      TableRow(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Text(
-              '${translate(label)}:',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 16,
-                color: disabledTextColor(context, enabled),
-              ),
-            ),
-          ),
-          TextField(
-            controller: controller,
-            enabled: enabled,
-            obscureText: secure,
-            autocorrect: false,
-            decoration: InputDecoration(
-              errorText: errorText.isNotEmpty ? errorText : null,
-            ),
-            style: TextStyle(
-              color: disabledTextColor(context, enabled),
-            ),
-          ).workaroundFreezeLinuxMint(),
-        ],
-      ),
-    ],
-  ).marginOnly(bottom: 8);
 }
 
 class _CountDownButton extends StatefulWidget {

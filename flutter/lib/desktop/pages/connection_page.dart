@@ -5,17 +5,18 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
 import 'package:flutter_hbb/common/widgets/login.dart';
 import 'package:flutter_hbb/common/widgets/peer_card.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/themes/theme_manager.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -29,6 +30,7 @@ import '../../models/platform_model.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
 enum _DesktopSidebarSection {
+  connectionCenter,
   devices,
   connectionHistory,
   addressBook,
@@ -252,7 +254,8 @@ class _ConnectionPageState extends State<ConnectionPage>
   Iterable<Peer> _autocompleteOpts = [];
 
   final _menuOpen = false.obs;
-  _DesktopSidebarSection _activeSection = _DesktopSidebarSection.devices;
+  _DesktopSidebarSection _activeSection =
+      _DesktopSidebarSection.connectionCenter;
   bool _showListView = true;
 
   @override
@@ -277,7 +280,7 @@ class _ConnectionPageState extends State<ConnectionPage>
     Get.put<IDTextEditingController>(_idController);
     windowManager.addListener(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _activateSection(_DesktopSidebarSection.devices, reload: true);
+      _activateSection(_DesktopSidebarSection.connectionCenter, reload: true);
     });
   }
 
@@ -362,6 +365,8 @@ class _ConnectionPageState extends State<ConnectionPage>
 
     return Obx(() {
       final isLoggedIn = gFFI.userModel.isLogin;
+      final canAccessSection =
+          !_sectionRequiresLogin(_activeSection) || isLoggedIn;
       return Container(
         color: colors.background,
         child: Row(
@@ -369,7 +374,7 @@ class _ConnectionPageState extends State<ConnectionPage>
             _buildSidebar(context, colors, isLoggedIn),
             VerticalDivider(width: 1, thickness: 1, color: colors.border),
             Expanded(
-              child: isLoggedIn
+              child: canAccessSection
                   ? _buildWorkspace(context, colors)
                   : Center(
                       child: _buildLoginRequiredCard(context, colors),
@@ -381,6 +386,18 @@ class _ConnectionPageState extends State<ConnectionPage>
     });
   }
 
+  bool _sectionRequiresLogin(_DesktopSidebarSection section) {
+    switch (section) {
+      case _DesktopSidebarSection.connectionCenter:
+      case _DesktopSidebarSection.connectionHistory:
+      case _DesktopSidebarSection.fileTransfer:
+        return false;
+      case _DesktopSidebarSection.devices:
+      case _DesktopSidebarSection.addressBook:
+        return true;
+    }
+  }
+
   void _activateSection(_DesktopSidebarSection section, {bool reload = false}) {
     if (!reload && _activeSection == section) {
       return;
@@ -389,6 +406,8 @@ class _ConnectionPageState extends State<ConnectionPage>
       _activeSection = section;
     });
     switch (section) {
+      case _DesktopSidebarSection.connectionCenter:
+        break;
       case _DesktopSidebarSection.devices:
         gFFI.peerTabModel.setCurrentTab(PeerTabIndex.group.index);
         bind.setLocalFlutterOption(
@@ -425,46 +444,59 @@ class _ConnectionPageState extends State<ConnectionPage>
       color: colors.surface,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.cloud_circle_rounded,
-                    color: colors.primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    appName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: colors.textPrimary,
+          GestureDetector(
+            onDoubleTap: _toggleMainWindowMaximize,
+            onPanStart: (_) => windowManager.startDragging(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 16, 18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: colors.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.cloud_circle_rounded,
+                      color: colors.primary,
+                      size: 22,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      appName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (!isMacOS) _buildWindowActions(colors),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
           _buildSidebarItem(
             context,
             colors,
+            section: _DesktopSidebarSection.connectionCenter,
+            icon: Icons.home_rounded,
+            label: '连接中心',
+            enabled: true,
+          ),
+          _buildSidebarItem(
+            context,
+            colors,
             section: _DesktopSidebarSection.devices,
             icon: Icons.devices_other_rounded,
-            label: translate('My devices'),
+            label: '我的设备',
             enabled: isLoggedIn,
           ),
           _buildSidebarItem(
@@ -472,15 +504,15 @@ class _ConnectionPageState extends State<ConnectionPage>
             colors,
             section: _DesktopSidebarSection.connectionHistory,
             icon: Icons.history_rounded,
-            label: translate('Recent sessions'),
-            enabled: isLoggedIn,
+            label: '连接记录',
+            enabled: true,
           ),
           _buildSidebarItem(
             context,
             colors,
             section: _DesktopSidebarSection.addressBook,
             icon: Icons.contacts_outlined,
-            label: translate('Address book'),
+            label: '地址簿',
             enabled: isLoggedIn,
           ),
           _buildSidebarItem(
@@ -488,14 +520,14 @@ class _ConnectionPageState extends State<ConnectionPage>
             colors,
             section: _DesktopSidebarSection.fileTransfer,
             icon: Icons.folder_open_rounded,
-            label: translate('Transfer file'),
-            enabled: isLoggedIn,
+            label: '文件传输',
+            enabled: true,
           ),
           _buildSidebarAction(
             context,
             colors,
             icon: Icons.settings_outlined,
-            label: translate('Settings'),
+            label: '设置',
             onTap: _openSettings,
           ),
           const Spacer(),
@@ -509,6 +541,49 @@ class _ConnectionPageState extends State<ConnectionPage>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWindowActions(ModernColors colors) {
+    Widget action({
+      required IconData icon,
+      required VoidCallback onTap,
+    }) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: colors.surfaceVariant.withOpacity(0.6),
+          ),
+          child: Icon(icon, size: 16, color: colors.textSecondary),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        action(
+          icon: Icons.remove_rounded,
+          onTap: () => windowManager.minimize(),
+        ),
+        const SizedBox(width: 6),
+        action(
+          icon: stateGlobal.isMaximized.isTrue
+              ? Icons.filter_none_rounded
+              : Icons.crop_square_rounded,
+          onTap: _toggleMainWindowMaximize,
+        ),
+        const SizedBox(width: 6),
+        action(
+          icon: Icons.close_rounded,
+          onTap: () => windowManager.hide(),
+        ),
+      ],
     );
   }
 
@@ -605,8 +680,10 @@ class _ConnectionPageState extends State<ConnectionPage>
   }
 
   Widget _buildWorkspace(BuildContext context, ModernColors colors) {
-    final showToolbar = _activeSection != _DesktopSidebarSection.fileTransfer;
-    final showFooter = _activeSection != _DesktopSidebarSection.fileTransfer;
+    final showToolbar = _activeSection == _DesktopSidebarSection.devices ||
+        _activeSection == _DesktopSidebarSection.connectionHistory ||
+        _activeSection == _DesktopSidebarSection.addressBook;
+    final showFooter = showToolbar;
     return Padding(
       padding: const EdgeInsets.fromLTRB(30, 28, 30, 24),
       child: Column(
@@ -645,22 +722,22 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   String _sectionTitle(_DesktopSidebarSection section) {
     switch (section) {
+      case _DesktopSidebarSection.connectionCenter:
+        return '连接中心';
       case _DesktopSidebarSection.devices:
-        return translate('My devices');
+        return '我的设备';
       case _DesktopSidebarSection.connectionHistory:
-        return translate('Recent sessions');
+        return '连接记录';
       case _DesktopSidebarSection.addressBook:
-        return translate('Address book');
+        return '地址簿';
       case _DesktopSidebarSection.fileTransfer:
-        return translate('Transfer file');
+        return '文件传输';
     }
   }
 
   Widget _buildToolbar(ModernColors colors) {
     final primaryActionLabel =
-        _activeSection == _DesktopSidebarSection.addressBook
-            ? translate('Add to address book')
-            : 'Add Device';
+        _activeSection == _DesktopSidebarSection.addressBook ? '加入地址簿' : '添加设备';
 
     return Row(
       children: [
@@ -716,7 +793,7 @@ class _ConnectionPageState extends State<ConnectionPage>
               cursorColor: colors.primary,
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Search device / note / ID',
+                hintText: '搜索设备名 / ID / 备注',
                 hintStyle: TextStyle(
                   color: colors.textTertiary,
                   fontWeight: FontWeight.w400,
@@ -807,6 +884,8 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   void _handlePrimaryAction() {
     switch (_activeSection) {
+      case _DesktopSidebarSection.connectionCenter:
+        break;
       case _DesktopSidebarSection.devices:
       case _DesktopSidebarSection.connectionHistory:
       case _DesktopSidebarSection.addressBook:
@@ -820,6 +899,8 @@ class _ConnectionPageState extends State<ConnectionPage>
 
   Widget _buildSectionBody(ModernColors colors) {
     switch (_activeSection) {
+      case _DesktopSidebarSection.connectionCenter:
+        return _buildConnectionCenterSection(colors);
       case _DesktopSidebarSection.devices:
         return MyGroupPeerView(menuPadding: kDesktopMenuPadding);
       case _DesktopSidebarSection.connectionHistory:
@@ -831,6 +912,205 @@ class _ConnectionPageState extends State<ConnectionPage>
     }
   }
 
+  Future<void> _toggleMainWindowMaximize() async {
+    if (await windowManager.isMaximized()) {
+      await windowManager.unmaximize();
+      stateGlobal.setMaximized(false);
+    } else {
+      await windowManager.maximize();
+      stateGlobal.setMaximized(true);
+    }
+  }
+
+  Future<void> _copyText(String value, String label) async {
+    if (value.trim().isEmpty) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: value));
+    showToast('$label已复制');
+  }
+
+  Widget _buildConnectionCenterSection(ModernColors colors) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 980;
+        final localCard = _buildLocalDeviceCard(colors);
+        final connectCard = _buildRemoteIDTextField(
+          context,
+          colors,
+          title: '连接到其他设备',
+        );
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: wide
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: localCard),
+                        const SizedBox(width: 24),
+                        connectCard,
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        localCard,
+                        const SizedBox(height: 18),
+                        Align(
+                          alignment: Alignment.center,
+                          child: connectCard,
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocalDeviceCard(ModernColors colors) {
+    return AnimatedBuilder(
+      animation: gFFI.serverModel,
+      builder: (context, child) {
+        final ServerModel model = gFFI.serverModel;
+        final currentId = model.serverId.text.trim();
+        final currentPassword = model.serverPasswd.text.trim();
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '本机连接信息',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '把下面的连接码和密码发给对方，对方就可以连接到这台设备。',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.55,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 22),
+              _buildLocalInfoField(
+                colors,
+                label: '连接码',
+                value: currentId.isEmpty ? '--' : currentId,
+                onCopy: currentId.isEmpty
+                    ? null
+                    : () => _copyText(currentId, '连接码'),
+              ),
+              const SizedBox(height: 14),
+              _buildLocalInfoField(
+                colors,
+                label: '一次性密码',
+                value: currentPassword.isEmpty ? '--' : currentPassword,
+                onCopy: currentPassword.isEmpty
+                    ? null
+                    : () => _copyText(currentPassword, '密码'),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => bind.mainUpdateTemporaryPassword(),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('刷新密码'),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        DesktopSettingPage.switch2page(SettingsTabKey.safety),
+                    icon: const Icon(Icons.security_rounded, size: 18),
+                    label: const Text('安全设置'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.border),
+                ),
+                child: const OnlineStatusWidget(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocalInfoField(
+    ModernColors colors, {
+    required String label,
+    required String value,
+    VoidCallback? onCopy,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onCopy != null)
+            OutlinedButton.icon(
+              onPressed: onCopy,
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('复制'),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFileTransferSection(ModernColors colors) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -839,7 +1119,7 @@ class _ConnectionPageState extends State<ConnectionPage>
           context,
           colors,
           mode: _QuickConnectMode.fileTransfer,
-          title: translate('Transfer file'),
+          title: '文件传输',
         );
         final tips = _buildFileTransferTips(colors);
         return Center(
@@ -933,7 +1213,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select a remote device and start a direct file transfer session.',
+          '输入远程设备码后，可直接打开文件传输会话，无需先进入远程桌面。',
           style: TextStyle(
             fontSize: 15,
             height: 1.55,
@@ -943,23 +1223,20 @@ class _ConnectionPageState extends State<ConnectionPage>
         const SizedBox(height: 20),
         buildTip(
           icon: Icons.dialpad_rounded,
-          title: 'Enter remote ID',
-          subtitle:
-              'Use the device ID under the current account, or any reachable device ID that you have permission to access.',
+          title: '输入远程设备码',
+          subtitle: '可以输入当前账号下的设备码，也可以输入你有权限访问的其他设备码。',
         ),
         const SizedBox(height: 12),
         buildTip(
           icon: Icons.folder_zip_outlined,
-          title: 'Open transfer window',
-          subtitle:
-              'The client will create a file transfer session instead of opening remote desktop control.',
+          title: '打开文件传输窗口',
+          subtitle: '客户端会直接创建文件传输会话，而不是进入远程控制桌面。',
         ),
         const SizedBox(height: 12),
         buildTip(
           icon: Icons.settings_outlined,
-          title: 'Connection settings',
-          subtitle:
-              'If you need to adjust relay, security, or other connection options, open Settings before starting the transfer.',
+          title: '连接参数设置',
+          subtitle: '如果需要调整中继、安全或其他连接参数，可以先打开设置再开始传输。',
         ),
         const SizedBox(height: 16),
         Align(
@@ -968,7 +1245,7 @@ class _ConnectionPageState extends State<ConnectionPage>
             onPressed: _openSettings,
             icon: const Icon(Icons.settings_outlined, size: 18),
             label: Text(
-              translate('Settings'),
+              '设置',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -985,7 +1262,7 @@ class _ConnectionPageState extends State<ConnectionPage>
         return Row(
           children: [
             Text(
-              '$total devices',
+              '$total 台设备',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1044,7 +1321,7 @@ class _ConnectionPageState extends State<ConnectionPage>
               child: Row(
                 children: [
                   Text(
-                    '10 / page',
+                    '每页 10 条',
                     style: TextStyle(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
@@ -1088,17 +1365,61 @@ class _ConnectionPageState extends State<ConnectionPage>
     bool isViewCamera = false,
     bool isTerminal = false,
   }) async {
-    if (!gFFI.userModel.isLogin) {
-      await _loginAndFocusMyDevices();
+    final normalizedId = _idController.id.replaceAll(' ', '').trim();
+    if (normalizedId.isEmpty) {
+      showToast('请输入远程设备码');
       return;
     }
+    if (await shouldBlockSelfConnect(normalizedId)) {
+      showToast('本机设备不能连接自己');
+      return;
+    }
+    connect(
+      context,
+      normalizedId,
+      isFileTransfer: isFileTransfer,
+      isViewCamera: isViewCamera,
+      isTerminal: isTerminal,
+    );
+  }
+
+  // ignore: unused_element
+  Future<void> _onConnectLegacy({
+    bool isFileTransfer = false,
+    bool isViewCamera = false,
+    bool isTerminal = false,
+  }) async {
+    await onConnect(
+      isFileTransfer: isFileTransfer,
+      isViewCamera: isViewCamera,
+      isTerminal: isTerminal,
+    );
+    return;
+    /*
+    final normalizedId = _idController.id.replaceAll(' ', '').trim();
+    if (normalizedId.isEmpty) {
+      showToast('请输入远程设备码');
+      return;
+    }
+    if (await shouldBlockSelfConnect(normalizedId)) {
+      showToast('本机设备不能连接自己');
+      return;
+    }
+    connect(
+      context,
+      normalizedId,
+      isFileTransfer: isFileTransfer,
+      isViewCamera: isViewCamera,
+      isTerminal: isTerminal,
+    );
+    return;
     final id = _idController.id.replaceAll(' ', '').trim();
     if (id.isEmpty) {
-      showToast(translate('Enter Remote ID'));
+      showToast('请输入远程设备码');
       return;
     }
     if (await shouldBlockSelfConnect(id)) {
-      showToast('Current device cannot connect to itself');
+      showToast('本机设备不能连接自己');
       return;
     }
     connect(
@@ -1108,6 +1429,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       isViewCamera: isViewCamera,
       isTerminal: isTerminal,
     );
+    */
   }
 
   Future<void> _focusMyDevicesTab() async {
@@ -1139,7 +1461,7 @@ class _ConnectionPageState extends State<ConnectionPage>
   }
 
   void _openSettings() {
-    DesktopTabPage.onAddSetting(initialPage: SettingsTabKey.general);
+    DesktopSettingPage.switch2page(SettingsTabKey.general);
   }
 
   Future<void> _showAddDeviceDialog() async {
@@ -1151,7 +1473,7 @@ class _ConnectionPageState extends State<ConnectionPage>
     await gFFI.abModel.pullAb(force: ForcePullAb.listAndCurrent, quiet: false);
     final writableAddressBooks = gFFI.abModel.addressBooksCanWrite();
     if (writableAddressBooks.isEmpty) {
-      showToast('Address book is unavailable');
+      showToast('当前没有可写入的地址簿');
       return;
     }
     var selectedAddressBook = gFFI.abModel.current.canWrite()
@@ -1204,7 +1526,7 @@ class _ConnectionPageState extends State<ConnectionPage>
         }
         if (await shouldBlockSelfConnect(id)) {
           setState(() {
-            idError = 'Current device cannot be added here';
+            idError = '当前设备不能添加到地址簿';
           });
           return;
         }
@@ -1239,7 +1561,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       }
 
       return CustomAlertDialog(
-        title: Text(translate('Add to address book')),
+        title: const Text('加入地址簿'),
         contentBoxConstraints: const BoxConstraints(minWidth: 420),
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,7 +1580,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                 onChanged:
                     isSubmitting ? null : (value) => switchAddressBook(value!),
                 decoration: InputDecoration(
-                  labelText: translate('Address book'),
+                  labelText: '地址簿',
                 ),
               ).workaroundFreezeLinuxMint(),
             if (writableAddressBooks.length > 1) const SizedBox(height: 12),
@@ -1367,12 +1689,12 @@ class _ConnectionPageState extends State<ConnectionPage>
         ),
         actions: [
           dialogButton(
-            'Cancel',
+            '取消',
             onPressed: close,
             isOutline: true,
           ),
           dialogButton(
-            'OK',
+            '确定',
             onPressed: isSubmitting ? null : submit,
           ),
         ],
@@ -1422,7 +1744,7 @@ class _ConnectionPageState extends State<ConnectionPage>
           ),
           const SizedBox(height: 16),
           Text(
-            '$appName login required',
+            '登录后可查看账号设备',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -1432,7 +1754,7 @@ class _ConnectionPageState extends State<ConnectionPage>
           ),
           const SizedBox(height: 10),
           Text(
-            'Please sign in to $appName before starting a remote session. After login, the client will show the devices under the current account.',
+            '登录 $appName 后，可以查看当前账号下的设备列表、地址簿和账号相关功能。',
             style: TextStyle(
               color: colors.textSecondary,
               height: 1.5,
@@ -1738,9 +2060,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                           const SizedBox(width: 6),
                           Text(
                               translate(
-                                isFileTransferMode
-                                    ? 'Transfer file'
-                                    : 'Connect',
+                                isFileTransferMode ? '文件传输' : '连接',
                               ),
                               style:
                                   const TextStyle(fontWeight: FontWeight.w600)),
@@ -1791,19 +2111,19 @@ class _ConnectionPageState extends State<ConnectionPage>
                                   ),
                                   items: [
                                     (
-                                      'Transfer file',
+                                      '文件传输',
                                       () => onConnect(
                                             isFileTransfer: true,
                                           ),
                                     ),
                                     (
-                                      'View camera',
+                                      '查看摄像头',
                                       () => onConnect(
                                             isViewCamera: true,
                                           ),
                                     ),
                                     (
-                                      '${translate('Terminal')} (beta)',
+                                      '终端（测试）',
                                       () => onConnect(
                                             isTerminal: true,
                                           ),

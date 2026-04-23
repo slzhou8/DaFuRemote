@@ -339,21 +339,21 @@ class _PeersViewState extends State<_PeersView>
         children: [
           Expanded(
             flex: kPeerListInfoFlex,
-            child: Text('Device', style: labelStyle),
+            child: Text('设备信息', style: labelStyle),
           ),
           Expanded(
             flex: kPeerListNoteFlex,
-            child: Text('Note', style: labelStyle),
+            child: Text('备注', style: labelStyle),
           ),
           Expanded(
             flex: kPeerListStatusFlex,
-            child: Text('Status', style: labelStyle),
+            child: Text('状态', style: labelStyle),
           ),
           SizedBox(
             width: kPeerListActionsWidth,
             child: Align(
               alignment: Alignment.centerRight,
-              child: Text('Action', style: labelStyle),
+              child: Text('操作', style: labelStyle),
             ),
           ),
         ],

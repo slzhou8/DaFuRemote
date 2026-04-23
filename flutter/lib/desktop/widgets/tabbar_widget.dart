@@ -328,11 +328,6 @@ class _DesktopTabState extends State<DesktopTab>
 
   _DesktopTabState() : super();
 
-  static RxString tablabelGetter(String peerId) {
-    final alias = bind.mainGetPeerOptionSync(id: peerId, key: 'alias');
-    return RxString(getDesktopTabLabel(peerId, alias));
-  }
-
   @override
   void initState() {
     super.initState();
@@ -510,10 +505,14 @@ class _DesktopTabState extends State<DesktopTab>
 
   @override
   Widget build(BuildContext context) {
+    final hideCleanHomeBar = tabType == DesktopTabType.main &&
+        state.value.tabs.length == 1 &&
+        !isMacOS;
     return Column(children: [
       Obx(() {
         if (stateGlobal.showTabBar.isTrue &&
-            !(kUseCompatibleUiMode && isHideSingleItem())) {
+            !(kUseCompatibleUiMode && isHideSingleItem()) &&
+            !hideCleanHomeBar) {
           final showBottomDivider = _showTabBarBottomDivider(tabType);
           return SizedBox(
             height: _kTabBarHeight,
@@ -1319,7 +1318,7 @@ class AddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionIcon(
-        message: 'New Connection',
+        message: '新建连接',
         icon: IconFont.add,
         onTap: () => rustDeskWinManager.call(
             WindowType.Main, kWindowMainWindowOnTop, ""),

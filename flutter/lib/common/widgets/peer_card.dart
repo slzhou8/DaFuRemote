@@ -96,7 +96,7 @@ class _PeerCardState extends State<_PeerCard>
         border: Border.all(color: primary.withOpacity(0.35)),
       ),
       child: Text(
-        'Current',
+        '本机',
         style: TextStyle(
           fontSize: 10,
           color: primary,
@@ -169,7 +169,7 @@ class _PeerCardState extends State<_PeerCard>
         border: Border.all(color: colors.primary.withOpacity(0.2)),
       ),
       child: Text(
-        'Current',
+        '本机',
         style: TextStyle(
           fontSize: 10,
           color: colors.primary,
@@ -295,7 +295,7 @@ class _PeerCardState extends State<_PeerCard>
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  peer.online ? 'Online' : 'Offline',
+                  peer.online ? '在线' : '离线',
                   style: secondaryStyle.copyWith(
                     fontWeight: FontWeight.w700,
                     color: peer.online ? colors.success : colors.textSecondary,
@@ -337,9 +337,7 @@ class _PeerCardState extends State<_PeerCard>
                           : colors.primary,
                     ),
                     label: Text(
-                      peer.isCurrentDevice
-                          ? 'Current Device'
-                          : 'Remote Control',
+                      peer.isCurrentDevice ? '本机设备' : '远程控制',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -1703,7 +1701,7 @@ void _rdpDialog(String id) async {
 
 Widget getOnline(double rightPadding, bool online) {
   return Tooltip(
-      message: translate(online ? 'Online' : 'Offline'),
+      message: online ? '在线' : '离线',
       waitDuration: const Duration(seconds: 1),
       child: Padding(
           padding: EdgeInsets.fromLTRB(0, 4, rightPadding, 4),
